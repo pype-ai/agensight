@@ -89,7 +89,7 @@ To set up the agent playground, we provide an MCP server that, when integrated w
 ```bash
 # One time setup for agensight MCP
 # Clone the repository
-git clone git@github.com:PYPE-AI-MAIN/agensight_mcpserver.git
+git clone [https://github.com/pype-ai/agensight_mcpserver.git](https://github.com/pype-ai/agensight_mcpserver.git)
 cd agensight_mcpserver
 
 # Create a virtual environment
