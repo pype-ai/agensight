@@ -1,0 +1,13 @@
+openai>=1.0.0
+Flask
+pytest
+flask_cors
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation
+opentelemetry-instrumentation-openai
+fastapi
+uvicorn
+anthropic
+starlette
+pydantic

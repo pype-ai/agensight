@@ -1,0 +1,12 @@
+venv
+log
+.agensight
+agensight/ui/node_modules
+node_modules
+log
+build
+agensight/tracing/traces.db
+agensight.egg-info
+__pycache__/
+*.py[cod]
+

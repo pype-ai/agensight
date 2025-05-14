@@ -1,0 +1,615 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Light theme - professional and clean */
+:root {
+  --radius: 0.5rem;
+  --background: #f8f9fc;
+  --foreground: #1e1e2f;
+  --card: #ffffff;
+  --card-foreground: #1e1e2f;
+  --popover: #ffffff;
+  --popover-foreground: #1e1e2f;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #334155;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e2e8f0;
+  --accent-foreground: #1e293b;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #10b981;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e1e2f;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #1e293b;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #3b82f6;
+}
+
+/* Dark theme - inspired by the network monitoring dashboard in the first reference image */
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  --primary: #38bdf8;
+  --primary-foreground: #0f172a;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #2d3748;
+  --accent-foreground: #f8fafc;
+  --destructive: #f43f5e;
+  --border: #334155;
+  --input: #1e293b;
+  --ring: #38bdf8;
+  --chart-1: #38bdf8;
+  --chart-2: #4ade80;
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #f43f5e;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #0f172a;
+  --sidebar-accent: #2d3748;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #334155;
+  --sidebar-ring: #38bdf8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Typography - Consistent font styles */
+  h1, .h1 {
+    @apply text-3xl font-bold tracking-tight;
+    line-height: 1.2;
+  }
+  
+  h2, .h2 {
+    @apply text-2xl font-semibold tracking-tight;
+    line-height: 1.3;
+  }
+  
+  h3, .h3 {
+    @apply text-xl font-semibold tracking-tight;
+    line-height: 1.4;
+  }
+  
+  h4, .h4 {
+    @apply text-lg font-semibold tracking-tight;
+    line-height: 1.5;
+  }
+  
+  p, .p {
+    @apply text-base leading-7;
+  }
+  
+  .small {
+    @apply text-sm leading-6;
+  }
+  
+  .tiny {
+    @apply text-xs leading-5;
+  }
+  
+  .lead {
+    @apply text-lg text-muted-foreground;
+  }
+  
+  .large {
+    @apply text-lg font-medium;
+  }
+  
+  code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+  
+  /* Definition Lists */
+  dl dt {
+    @apply text-sm font-medium leading-none;
+  }
+  
+  dl dd {
+    @apply text-base text-muted-foreground;
+  }
+}
+
+
+
+/* Custom utilities for the playground style */
+@layer utilities {
+  .graph-node {
+    filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+    transition: all 0.2s ease;
+  }
+  
+  .graph-node:hover {
+    filter: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));
+    transform: translateY(-1px);
+  }
+
+  .graph-connection {
+    stroke-dasharray: 5, 5;
+    animation: flow 30s linear infinite;
+  }
+
+  @keyframes flow {
+    to {
+      stroke-dashoffset: 1000;
+    }
+  }
+  
+  /* Custom scrollbar styles */
+  .scroll-container::-webkit-scrollbar,
+  pre::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scroll-container::-webkit-scrollbar-track,
+  pre::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scroll-container::-webkit-scrollbar-thumb,
+  pre::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    opacity: 0.5;
+    border-radius: 4px;
+  }
+  
+  .scroll-container::-webkit-scrollbar-thumb:hover,
+  pre::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
+  
+  /* Firefox scrollbar */
+  .scroll-container, pre {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+  
+  /* Glass morphism effect for panels */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .glass-panel {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  /* Grid background */
+  .grid-bg {
+    background-size: 25px 25px;
+    background-image: none;
+  }
+  
+  .dark .grid-bg {
+    background-image: none;
+  }
+}
+
+/* Add styles to fix markdown editor in light/dark mode */
+.w-md-editor {
+  --md-text-color: #1e1e2f;
+  --md-border-color: #e2e8f0;
+  --md-border-radius: 0.5rem;
+}
+
+/* Direct styling for editor text area */
+.w-md-editor-text-input,
+.w-md-editor textarea {
+  color: #1e1e2f !important;
+}
+
+/* Monaco editor styles */
+.monaco-editor .view-lines,
+.monaco-editor .view-line,
+.monaco-editor .lines-content,
+.monaco-editor .mtk1 {
+  color: #1e1e2f !important;
+}
+
+/* Force any contenteditable or textbox elements */
+.w-md-editor [contenteditable="true"],
+.w-md-editor [role="textbox"] {
+  color: #1e1e2f !important;
+}
+
+/* Force dialog borders to match theme */
+.dark [data-slot="dialog-content"] {
+  border: none !important;
+  border-color: transparent !important;
+}
+
+/* Make dialog overlay transparent in dark mode */
+.dark [data-slot="dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.dark [data-slot="dialog-header"] {
+  border-bottom-color: rgba(51, 65, 85, 0.5) !important;
+}
+
+.dark [data-slot="dialog-footer"] {
+  border-top-color: rgba(51, 65, 85, 0.5) !important;
+}
+
+.w-md-editor-toolbar {
+  border-bottom: 1px solid var(--md-border-color);
+  background-color: #f8f9fc;
+}
+
+.w-md-editor-toolbar button {
+  color: #1e1e2f;
+}
+
+.w-md-editor-content {
+  background-color: white;
+}
+
+/* Light mode standard preview styling */
+.w-md-editor-preview {
+  box-shadow: inset 1px 0 0 0 var(--md-border-color);
+  background-color: white;
+  color: #1e1e2f;
+}
+
+/* Dark mode adjustments for the preview pane */
+.dark .w-md-editor-preview {
+  background-color: #f8f9fc !important; /* Light background for preview in dark mode */
+  color: #1e1e2f !important; /* Dark text for preview in dark mode */
+  border-left: 1px solid #2d3748 !important;
+  box-shadow: none !important;
+}
+
+/* Make sure preview content has consistent styling */
+.wmde-markdown {
+  color: #1e1e2f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Ensure proper heading colors in preview for both modes */
+.wmde-markdown h1,
+.wmde-markdown h2,
+.wmde-markdown h3,
+.wmde-markdown h4,
+.wmde-markdown h5,
+.wmde-markdown h6 {
+  color: #1e1e2f !important;
+  border-bottom-color: #e2e8f0;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+/* Proper styling for code blocks in both modes */
+.wmde-markdown code,
+.wmde-markdown-color code,
+.wmde-markdown code:not([class*="language-"]) {
+  background-color: #f1f5f9 !important;
+  color: #1e1e2f !important;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Better blockquote styling for both modes */
+.wmde-markdown blockquote {
+  color: #4a5568 !important;
+  border-left-color: #e2e8f0;
+  background-color: #f8f9fc;
+  margin: 1em 0;
+  padding: 0.5em 1em;
+}
+
+/* Table styling */
+.wmde-markdown table {
+  border-color: #e2e8f0 !important;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.wmde-markdown th,
+.wmde-markdown td {
+  border-color: #e2e8f0 !important;
+  padding: 0.5em;
+}
+
+/* Links */
+.wmde-markdown a {
+  color: #3b82f6 !important;
+  text-decoration: underline;
+}
+
+/* Dark mode adjustments */
+.dark .w-md-editor {
+  --md-text-color: #f8fafc;
+  --md-border-color: transparent;
+  border: 1px solid #2d3748 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: #0f172a !important;
+}
+
+.dark .w-md-editor-toolbar {
+  background-color: #1e293b;
+  border-color: transparent;
+  border: none !important;
+  border-bottom: 1px solid #2d3748 !important;
+}
+
+.dark .w-md-editor-toolbar button {
+  color: #f8fafc;
+}
+
+.dark .w-md-editor-toolbar svg {
+  fill: #f8fafc;
+}
+
+.dark .w-md-editor-content {
+  background-color: #0f172a;
+  color: var(--md-text-color);
+  border: none !important;
+  border-top: none !important;
+}
+
+.dark .wmde-markdown {
+  /* background-color: #0f172a; */
+  color: var(--md-text-color);
+}
+
+.dark .w-md-editor-preview {
+  /* background-color: #1e293b; */
+  color: var(--md-text-color);
+  box-shadow: none !important;
+  border-left: 1px solid #2d3748 !important;
+}
+
+/* Target the specific bottom border and other edge cases */
+.dark .w-md-editor > *,
+.dark .w-md-editor::before,
+.dark .w-md-editor-content,
+.dark .w-md-editor-content::before,
+.dark .w-md-editor-content::after,
+.dark .w-md-editor-area,
+.dark .w-md-editor-area::before,
+.dark .w-md-editor-area::after,
+.dark .w-md-editor-text,
+.dark .w-md-editor-text::before,
+.dark .w-md-editor-text::after,
+.dark .w-md-editor-preview::before,
+.dark .w-md-editor-preview::after {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Target textareas specifically */
+.dark .w-md-editor textarea,
+.dark .w-md-editor textarea:focus,
+.dark .w-md-editor textarea:active,
+.dark .w-md-editor-text textarea,
+.dark .w-md-editor-text textarea:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* Fix for the markdown text editor showing background color in the text */
+.dark .w-md-editor .w-md-editor-text-pre,
+.dark .w-md-editor .w-md-editor-text-input,
+.dark .w-md-editor .w-md-editor-text {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* Even more specific selectors with !important for dark mode text */
+.dark .w-md-editor .w-md-editor-text-input {
+  color: #ffffff !important;
+  caret-color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Override any Monaco editor styles for the editor */
+.dark .monaco-editor .view-lines,
+.dark .monaco-editor .view-line,
+.dark .monaco-editor .lines-content,
+.dark .monaco-editor .monaco-editor-background,
+.dark .monaco-editor .mtk1,
+.dark .monaco-editor [class*="mtk"] {
+  color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+/* Target any editable content in the editor */
+.dark .w-md-editor [contenteditable="true"],
+.dark .w-md-editor [role="textbox"],
+.dark .w-md-editor textarea,
+.dark .w-md-editor input {
+  color: #ffffff !important;
+  background-color: transparent !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Remove the last resort fix since we now want a visible border */
+.dark .w-md-editor::after {
+  display: none;
+}
+
+.dark .w-md-editor-toolbar-divider {
+  background-color: #2d3748 !important;
+}
+
+/* Natural styling for preview elements - keep default styling */
+.dark .wmde-markdown,
+.dark .w-md-editor-preview {
+  color: #1e1e2f !important; /* Ensure dark text on light background in preview */
+}
+
+/* Remove redundant color overrides since we're standardizing everything */
+.dark .wmde-markdown h1,
+.dark .wmde-markdown h2,
+.dark .wmde-markdown h3,
+.dark .wmde-markdown h4,
+.dark .wmde-markdown h5,
+.dark .wmde-markdown h6 {
+  color: #1e1e2f !important;
+  border-bottom-color: #e2e8f0;
+}
+
+.dark .wmde-markdown hr {
+  background-color: #e2e8f0;
+}
+
+.dark .wmde-markdown blockquote {
+  color: #4a5568 !important;
+  border-left-color: #e2e8f0;
+  background-color: #f8f9fc;
+}
+
+.dark .wmde-markdown pre {
+  background-color: #f8f9fc;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .wmde-markdown code {
+  background-color: #f8f9fc;
+  color: #1e1e2f !important;
+}
+
+.dark .wmde-markdown table {
+  border-color: #e2e8f0;
+}
+
+.dark .wmde-markdown th,
+.dark .wmde-markdown td {
+  border-color: #e2e8f0;
+}
+
+.dark .wmde-markdown img {
+  background-color: transparent;
+}
+
+.dark .wmde-markdown a {
+  color: #3b82f6 !important;
+}
+
+/* Improve highlighting for inline code so it maintains default appearance */
+.dark .wmde-markdown-color code,
+.dark .wmde-markdown code:not([class*="language-"]) {
+  background-color: #f1f5f9;
+  color: #1e1e2f !important;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+/* Sticky table styles */
+.sticky {
+  position: sticky;
+}
+
+.left-0 {
+  left: 0;
+}
+
+.top-0 {
+  top: 0;
+}
+
+/* Make sure sticky elements have proper z-index */
+.z-10 {
+  z-index: 10;
+}
+
+.z-20 {
+  z-index: 20;
+}
+
+/* Make sure the sticky column has a background */
+th.sticky, td.sticky {
+  box-shadow: inset -1px 0 0 rgba(229, 231, 235, 0.1);
+}
+
+/* Dark mode background colors for sticky elements */
+.dark th.sticky {
+  background-color: hsl(var(--muted));
+}
+
+.dark td.sticky {
+  background-color: hsl(var(--background));
+}
