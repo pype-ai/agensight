@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { IconMoon, IconSun } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,8 +13,10 @@ interface HeaderProps {
 }
 
 export function Header({ darkMode, toggleDarkMode ,children }: HeaderProps) {
+
+  
   return (
-    <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm z-40 sticky top-0 left-0 right-0">
+    <header className={"border-b border-border/40 bg-card/50 backdrop-blur-sm w-full"}>
       <div className="px-6 flex h-14 justify-between w-full items-center">
         <div className="flex items-center gap-4">
           <a className="flex items-center space-x-3 font-bold group" href="/">

@@ -12,7 +12,7 @@ from agensight.tracing import get_tracer
 from agensight.tracing.session import is_session_enabled, get_session_id
 from agensight.tracing.context import trace_input, trace_output
 from agensight.tracing.db import get_db
-
+from agensight.eval.metrics.base import BaseMetric
 # Global contextvars
 current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
@@ -118,14 +118,19 @@ def normalize_input_output(
     return result
 
 
+
+
+
+
 def span(
     name: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     input: Optional[Any] = None,
     output: Optional[Any] = None,
+    metrics: Optional[List[BaseMetric]] = None,
 ):
+        
     tracer = ot_trace.get_tracer("default")
-
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -140,8 +145,44 @@ def span(
                 attributes["trace.name"] = trace_name
             if is_session_enabled():
                 attributes["session.id"] = get_session_id()
+            
+            # add metrics configs to attributes
+            if metrics:
+                metric_configs = {}
+                for i, metric in enumerate(metrics):
+                    metric_name = getattr(metric, "name", f"metric_{i}")
+                    config = {
+                        "type": metric.__class__.__name__,
+                        "name": metric_name,
+                    }
+                    
+                    # Add specific GEvalEvaluator attributes
+                    if hasattr(metric, "criteria"):
+                        config["criteria"] = metric.criteria
+                    if hasattr(metric, "model"):
+                        config["model"] = metric.model
+                    if hasattr(metric, "threshold"):
+                        config["threshold"] = metric.threshold
+                    if hasattr(metric, "strict_mode"):
+                        config["strict_mode"] = metric.strict_mode
+                    if hasattr(metric, "verbose_mode"):
+                        config["verbose_mode"] = metric.verbose_mode
+                    
+                    # Skip complex objects that might not serialize well
+                    # But add their presence as metadata
+                    if hasattr(metric, "evaluation_params"):
+                        config["has_evaluation_params"] = True
+                    if hasattr(metric, "evaluation_steps"):
+                        config["has_evaluation_steps"] = True
+                        
+                    metric_configs[metric_name] = config
+                    
+                attributes["metrics.configs"] = json.dumps(metric_configs)
 
+            
+            # start span
             with tracer.start_as_current_span(span_name, attributes=attributes) as span_obj:
+
                 fallback_input = args or kwargs
                 try:
                     result = func(*args, **kwargs)
@@ -162,6 +203,8 @@ def span(
 
                 io_data = normalize_input_output(input, output, fallback_input, result, span_obj.attributes)
                 span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
+
+
 
                 return result
         return wrapper

@@ -69,12 +69,12 @@ Connections define how agents interact with each other:
     {
       "from": "AgentA",
       "to": "AgentB",
+      "variable": "result"
     }
   ]
 }
-
 ```
 
-This means the output from `AgentA` will be passed to `AgentB` .
+This means the output from `AgentA` will be passed to `AgentB` as the variable `result`.
 
 ```

@@ -12,6 +12,7 @@ from starlette.middleware.wsgi import WSGIMiddleware
 from .routes.config import config_router, config_bp
 from .routes.trace import trace_router, trace_bp
 from .routes.prompt import prompt_router, prompt_bp
+from .routes.metrics import metrics_router
 from fastapi.responses import FileResponse
 
 
@@ -24,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create FastAPI app
-app = FastAPI(title="AgenSight API")
+app = FastAPI(title="AgenSight API",debug=True)
 
 
 
@@ -49,6 +50,7 @@ class NoCacheStaticFiles(StaticFiles):
 app.include_router(config_router, prefix="/api")
 app.include_router(trace_router, prefix="/api")
 app.include_router(prompt_router, prefix="/api")
+app.include_router(metrics_router, prefix="/api")
 
 # Create Flask app for backward compatibility
 flask_app = Flask(__name__)

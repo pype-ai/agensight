@@ -7,6 +7,7 @@ log
 build
 agensight/tracing/traces.db
 agensight.egg-info
+# Python cache files
 __pycache__/
 *.py[cod]
-
+*$py.class

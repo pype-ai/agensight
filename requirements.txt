@@ -1,4 +1,4 @@
-openai>=1.0.0
+openai>=1.0.0 
 Flask
 pytest
 flask_cors
@@ -11,3 +11,4 @@ uvicorn
 anthropic
 starlette
 pydantic
+uuid>=1.30
