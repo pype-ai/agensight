@@ -3,8 +3,8 @@
 @tailwind base;
 @tailwind components;
 
-@custom-variant dark (&:is(.dark *));
 
+@custom-variant dark (&:is(.dark *));
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -124,6 +124,32 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Global scrollbar styling */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    opacity: 0.5;
+    border-radius: 4px;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
+  
+  /* Firefox scrollbar - global */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
 
   /* Typography - Consistent font styles */
   h1, .h1 {
@@ -202,37 +228,7 @@
       stroke-dashoffset: 1000;
     }
   }
-
-  /* Custom scrollbar styles */
-  .scroll-container::-webkit-scrollbar,
-  pre::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  .scroll-container::-webkit-scrollbar-track,
-  pre::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scroll-container::-webkit-scrollbar-thumb,
-  pre::-webkit-scrollbar-thumb {
-    background: var(--muted-foreground);
-    opacity: 0.5;
-    border-radius: 4px;
-  }
-
-  .scroll-container::-webkit-scrollbar-thumb:hover,
-  pre::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
-  }
-
-  /* Firefox scrollbar */
-  .scroll-container, pre {
-    scrollbar-width: thin;
-    scrollbar-color: var(--muted-foreground) transparent;
-  }
-
+  
   /* Glass morphism effect for panels */
   .glass-panel {
     background: rgba(255, 255, 255, 0.2);

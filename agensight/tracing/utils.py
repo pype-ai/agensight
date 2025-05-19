@@ -1,5 +1,6 @@
 import json
 from typing import List, Dict, Any
+from agensight.eval.metrics.test_case import ModelTestCase
 
 def ns_to_seconds(nanoseconds: int) -> float:
     return nanoseconds / 1e9
@@ -159,3 +160,146 @@ def parse_normalized_io_for_span(span_id: str, attribute_json: str):
 
     except json.JSONDecodeError:
         return [], []
+
+
+def extract_test_case_from_io_data(io_data):
+    """Helper function to extract input and output from normalized IO data."""
+    try:
+        metric_input = None
+        metric_output = None
+        
+        # Helper to extract content from potentially stringified dictionaries
+        def extract_text_from_content(content):
+            if not content:
+                return None
+                
+            # Try to parse as JSON/dict if it looks like one
+            if (content.startswith('{') and content.endswith('}')) or \
+               (content.startswith("{'") and content.endswith("'}")):
+                try:
+                    # Handle potential single quotes
+                    content = content.replace("'", '"')
+                    parsed = json.loads(content)
+                    
+                    # Try to extract actual text content from common fields
+                    for field in ['input_text', 'actual_output', 'content', 'text', 
+                                 'input', 'output', 'prompt', 'completion', 'joke']:
+                        if field in parsed and parsed[field]:
+                            return parsed[field]
+                    
+                    # If no specific field found, return the whole thing as string
+                    return str(parsed)
+                except:
+                    pass
+            
+            # If not parseable or no extraction, return as is
+            return content
+        
+        # Try to extract from normalized IO data
+        if "prompts" in io_data and io_data["prompts"]:
+            prompt = io_data["prompts"][0]
+            if "content" in prompt:
+                metric_input = extract_text_from_content(prompt["content"])
+        
+        if "completions" in io_data and io_data["completions"]:
+            completion = io_data["completions"][0]
+            if "content" in completion:
+                metric_output = extract_text_from_content(completion["content"])
+        
+        # If we couldn't extract, try alternate formats
+        if not metric_input and "input" in io_data:
+            metric_input = extract_text_from_content(io_data["input"])
+        if not metric_output and "output" in io_data:
+            metric_output = extract_text_from_content(io_data["output"])
+                
+    
+        
+        # Create test case if we have both input and output
+        if metric_input and metric_output:
+            return ModelTestCase(
+                input=metric_input,
+                actual_output=metric_output
+            )
+    except Exception as e:
+        # Print error for debugging
+        print(f"Extraction error: {e}")
+        # Silent fail - error details will be added by the caller
+        pass
+    
+    return None
+
+
+
+def calculate_metrics(metrics, test_case, span_obj):
+    """Helper function to calculate metrics and add them to span attributes."""
+    if not test_case or not metrics:
+        return
+        
+    metrics_results = {}
+    successful_metrics = 0
+    failed_metrics = 0
+    
+    for metric in metrics:
+        try:
+            metric_name = getattr(metric, "name", metric.__class__.__name__)
+            print(f"Processing metric: {metric_name}")
+            
+            # Check for additional parameters stored in the metric
+            for param_name in ["expected_output", "context", "retrieval_context", 
+                              "expected_tools", "tools_called", "criteria"]:
+                if hasattr(metric, param_name):
+                    param_value = getattr(metric, param_name)
+                    if param_value is not None:
+                        setattr(test_case, param_name, param_value)
+            # Try different metric interfaces
+            if hasattr(metric, 'measure'):
+                print(f"Using measure() interface for {metric_name}")
+                metric_result = metric.measure(test_case)
+            elif hasattr(metric, 'compute'):
+                print(f"Using compute() interface for {metric_name}")
+                # Extract parameters from test_case for compute interface
+                kwargs = {
+                    'input': test_case.input,
+                    'actual_output': test_case.actual_output
+                }
+                
+                # Add optional parameters if available
+                for param in ['expected_output', 'context', 'retrieval_context', 
+                             'expected_tools', 'tools_called', 'criteria']:
+                    if hasattr(test_case, param):
+                        kwargs[param] = getattr(test_case, param)
+                        
+                metric_result = metric.compute(**kwargs)
+            else:
+                print(f"No compatible interface found for {metric_name}")
+                raise ValueError(f"Metric {metric_name} has no compatible interface")
+            
+            print(f"Metric result: {metric_result}")
+            
+            # Store results
+            metrics_results[metric_name] = metric_result
+            
+            # Add detailed metric information
+            if isinstance(metric_result, dict):
+                for key, value in metric_result.items():
+                    span_obj.set_attribute(f"metric.{metric_name}.{key}", str(value))
+            else:
+                span_obj.set_attribute(f"metric.{metric_name}", str(metric_result))
+                
+            successful_metrics += 1
+            
+        except Exception as e:
+            print(f"Metric error: {e}")
+            span_obj.set_attribute(f"metric.error.{getattr(metric, 'name', 'unknown')}", str(e))
+            failed_metrics += 1
+    
+    print(f"metrics_results: {metrics_results}")
+
+    # Add metrics summary
+    span_obj.set_attribute("metrics.successful", successful_metrics)
+    span_obj.set_attribute("metrics.failed", failed_metrics)
+    
+    # Add all metrics results as a single attribute
+    if metrics_results:
+        span_obj.set_attribute("metrics.results", json.dumps(metrics_results))
+        span_obj.set_attribute("metrics.status", "success")
