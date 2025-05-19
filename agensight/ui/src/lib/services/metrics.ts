@@ -75,6 +75,11 @@ export interface MetricsBatchResponse {
   total_requested: number;
 }
 
+export interface MetricsResponse {
+  metrics: Metric[];
+  total: number;
+}
+
 // Base API URL - using the same as traces.ts
 const API_BASE_URL = "http://0.0.0.0:5001/api";
 
@@ -154,7 +159,7 @@ export async function getSpanMetrics(
     min_score?: number;
     max_score?: number;
   }
-): Promise<any> {
+): Promise<MetricsResponse> {
   const queryParams = new URLSearchParams();
   
   if (params) {
@@ -166,7 +171,14 @@ export async function getSpanMetrics(
   }
   
   const url = `${API_BASE_URL}/span/${spanId}/metrics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-  return fetchWithRetry<any>(url);
+  const response = await fetchWithRetry<MetricsResponse>(url);
+  
+  // Ensure we always return the correct format
+  if (!response || !response.metrics) {
+    return { metrics: [], total: 0 };
+  }
+  
+  return response;
 }
 
 /**
@@ -235,7 +247,7 @@ export async function getMetricsBatch(metricIds: string[]): Promise<MetricsBatch
 
 // Utility function to format a score (0.0 to 1.0) as a percentage
 export function formatScore(score: number): string {
-  return `${Math.round(score * 100)}%`;
+  return `${score}`;
 }
 
 // Utility to get a color based on score

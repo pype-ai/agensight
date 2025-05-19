@@ -29,6 +29,8 @@ import { updateAgent } from "@/lib/services/agents"
 import { getAllTraces } from "@/lib/services/traces"
 import type { Connection } from "@/lib/fallbackConfigs"
 import Image from "next/image"
+import { getMetrics } from "@/lib/services/metrics"
+import { MetricsTable } from "@/components/metrics-table"
 
 // Define types for config and agent
 interface Agent {
@@ -494,17 +496,10 @@ export default function Dashboard() {
                 )}
               </div>
             )}
-            
             {activeTab === "evaluations" && (
-              <div className="border rounded-lg p-8 flex items-center justify-center bg-card/50 backdrop-blur-sm h-[550px]">
-                <div className="text-center">
-                  <Image src="/pype-logo.png" alt="PYPE Logo" width={100} height={100} className="h-12 w-20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">No evaluation till now</h3>
-                  <p className="text-muted-foreground mt-2">
-                    Evaluation data will appear here when you run experiments
-                  </p>
+                <div className="flex-1 flex flex-col h-full">
+                <MetricsTable />
                 </div>
-              </div>
             )}
           </div>
         </div>
