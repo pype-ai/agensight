@@ -11,3 +11,5 @@ agensight.egg-info
 __pycache__/
 *.py[cod]
 *$py.class
+trace.db
+eval.db

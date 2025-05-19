@@ -81,6 +81,33 @@ if __name__ == "__main__":
     main()
 ```
 
+## Evaluate Your Agent 
+
+automatically evaluate your agent's outputs by attaching evaluation metrics to a span. use the GEvalEvaluator to assess custom criteria.
+
+```python
+# Define evaluation metrics
+factual_accuracy = GEvalEvaluator(
+    name="Factual Accuracy",
+    criteria="Evaluate whether the actual output contains factually accurate information based on the expected output.",
+    threshold=0.7,
+    verbose_mode=True
+)
+
+helpfulness = GEvalEvaluator(
+    name="Helpfulness",
+    criteria="Evaluate whether the output is helpful and addresses the user's input question.",
+    threshold=0.6,
+    verbose_mode=True,
+)
+
+# Attach metrics to your span
+@span(name="improve_joke", metrics=[factual_accuracy, helpfulness])
+def improve_joke(actual_output, expected_output):
+    # ... your logic here ...
+    return actual_output
+
+```
 
 ## Playground Setup
 

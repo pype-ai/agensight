@@ -4,7 +4,7 @@ from IPython.display import Image, display
 from agensight import init
 from agensight import trace, span
 from openai import OpenAI
-from agensight.eval.gval import GEvalEvaluator
+from agensight.eval.g_eval import GEvalEvaluator
 
 import os
 
@@ -31,7 +31,7 @@ helpfulness = GEvalEvaluator(
         name="Helpfulness",
         criteria="Evaluate whether the output is helpful and addresses the user's input question.",
         threshold=0.6,
-        verbose_mode=True
+        verbose_mode=True,
 )
 
 
