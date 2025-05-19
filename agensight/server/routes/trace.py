@@ -16,6 +16,51 @@ trace_bp = Blueprint('trace', __name__)
 logger = logging.getLogger(__name__)
 
 
+@trace_router.get("/sessions", tags=["sessions"])
+def list_sessions(
+    user_id: Optional[str] = Query(None),
+    session_name: Optional[str] = Query(None),
+):
+    try:
+        conn = get_db()
+        query = "SELECT * FROM sessions WHERE 1=1"
+        params = []
+
+        if user_id:
+            query += " AND user_id = ?"
+            params.append(user_id)
+        if session_name:
+            query += " AND session_name LIKE ?"
+            params.append(f"%{session_name}%")
+
+        query += " ORDER BY started_at DESC"
+        rows = conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
+
+    except sqlite3.DatabaseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@trace_router.get("/sessions/{session_id}", tags=["sessions"])
+def get_session(session_id: str):
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return dict(row)
+    except sqlite3.DatabaseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@trace_router.get("/sessions/{session_id}/traces", tags=["sessions"])
+def get_traces_for_session(session_id: str):
+    try:
+        conn = get_db()
+        rows = conn.execute("SELECT * FROM traces WHERE session_id = ? ORDER BY started_at DESC", (session_id,)).fetchall()
+        return [dict(row) for row in rows]
+    except sqlite3.DatabaseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @trace_router.get("/traces")
 def list_traces():
     try:

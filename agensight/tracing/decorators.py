@@ -3,7 +3,8 @@ import json
 import time
 import uuid
 import contextvars
-from typing import Callable, Optional, Dict, Any, List
+from typing import Callable, Optional, Dict, Any, List, Union
+from agensight.tracing.session import enable_session_tracking, set_session_id
 
 from opentelemetry import trace as ot_trace
 from opentelemetry.trace.status import Status, StatusCode
@@ -18,12 +19,36 @@ current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
 
 
-def trace(name: Optional[str] = None, **default_attributes):
+def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None, **default_attributes):
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             trace_name = name or func.__name__
-            trace_id = uuid.uuid4().hex
+            trace_id = str(uuid.uuid4())
+
+            if isinstance(session, dict):
+                session_id = session.get("id")
+                session_name = session.get("name")
+                user_id = session.get("user_id")
+            else:
+                session_id = session
+                session_name = None
+                user_id = None
+
+            if session_id:
+                enable_session_tracking()
+                set_session_id(session_id)
+                try:
+                    from agensight.tracing.db import get_db
+                    import time, json
+                    conn = get_db()
+                    conn.execute(
+                        "INSERT OR IGNORE INTO sessions (id, started_at, session_name, user_id, metadata) VALUES (?, ?, ?, ?, ?)",
+                        (session_id, time.time(), session_name, user_id, json.dumps({}))
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
 
             current_trace_id.set(trace_id)
             current_trace_name.set(trace_name)
