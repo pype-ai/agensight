@@ -1,12 +1,32 @@
-import React from "react";
-import ClientOnly from "@/components/client-only";
-import TraceClient from "./client";
+'use client';
 
-// This is a static page that uses query parameters instead of route parameters
+import React, { Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import TraceDetailPage from '@/components/trace-details/trace-detail-page';
+
+const TraceClient = () => {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
+  const router = useRouter();
+  const name = searchParams.get('name');
+  const latency = searchParams.get('latency');
+  const total_tokens = searchParams.get('total_tokens');
+
+  return (
+    <TraceDetailPage
+      id={id as string}
+      total_tokens={Number(total_tokens)}
+      name={name as string}
+      latency={Number(latency)}
+      router={router}
+    />
+  );
+};
+
 export default function TracePage() {
   return (
-    <ClientOnly>
-      <TraceClient  />
-    </ClientOnly>
+    <Suspense fallback={<div>Loading...</div>}>
+      <TraceClient />
+    </Suspense>
   );
-} 
+}

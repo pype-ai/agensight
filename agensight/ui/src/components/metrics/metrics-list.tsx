@@ -22,7 +22,7 @@ export const MetricsList: React.FC<MetricsListProps> = ({
     );
   }
 
-  if (!metrics || metrics.length === 0) {
+  if (!metrics || !Array.isArray(metrics) || metrics.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-sm">
         <p>No metrics available for this span</p>

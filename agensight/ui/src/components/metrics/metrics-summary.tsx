@@ -50,7 +50,7 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
                 "bg-red-500/10 text-red-500"
               }
             >
-              {(metric.score * 100).toFixed(0)}%
+              {metric.score.toFixed(2)}
             </Badge>
             <span
               className="inline-block ml-1 cursor-help text-muted-foreground hover:text-foreground"

@@ -13,4 +13,6 @@ __pycache__/
 *$py.class
 trace.db
 eval.db
+dist
 agensight.config.json
+.env

@@ -37,73 +37,69 @@ def list_metrics(
         conn = get_db()
         cursor = conn.cursor()
         
-        print(f"Fetching metrics with parameters: parent_id={parent_id}, parent_type={parent_type}, metric_name={metric_name}, source={source}, project_id={project_id}, limit={limit}, offset={offset}")
         # First check if evaluations table exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='evaluations'")
         table_exists = cursor.fetchone()
-        print(f"Evaluations table exists: {table_exists}")
         if not table_exists:
-            return []  # ReturnReturn empty list if table doesn't exist
+            return {"metrics": [], "total": 0}
             
         # Build query conditionally
         query = 'SELECT * FROM evaluations WHERE 1=1'
+        count_query = 'SELECT COUNT(*) FROM evaluations WHERE 1=1'
         
         # Handle each filter separately
         if parent_id:
             query += f" AND parentId = '{parent_id}'"
+            count_query += f" AND parentId = '{parent_id}'"
         
         if parent_type:
             query += f" AND parentType = '{parent_type}'"
+            count_query += f" AND parentType = '{parent_type}'"
         
         if metric_name:
             query += f" AND metricName = '{metric_name}'"
+            count_query += f" AND metricName = '{metric_name}'"
         
         if source:
             query += f" AND source = '{source}'"
+            count_query += f" AND source = '{source}'"
         
         if project_id:
             query += f" AND projectId = '{project_id}'"
-
+            count_query += f" AND projectId = '{project_id}'"
                 
+        # Get total count
+        cursor.execute(count_query)
+        total = cursor.fetchone()[0]
+        
         # Add sorting and pagination
         query += f" ORDER BY createdAt DESC LIMIT {limit} OFFSET {offset}"
         
-        # Execute without parameters
+        # Execute main query
         cursor.execute(query)
         rows = cursor.fetchall()
         
-        # Process results
-        results = []
+        # Convert rows to dictionaries
+        metrics = []
         for row in rows:
-            row_dict = dict(row)
-            # Parse JSON fields
-            if row_dict.get('meta'):
+            metric = dict(row)
+            # Parse any JSON fields if needed
+            if 'meta' in metric and isinstance(metric['meta'], str):
                 try:
-                    row_dict['meta'] = json.loads(row_dict['meta'])
-                except json.JSONDecodeError:
-                    row_dict['meta'] = {}
-            
-            # Parse tags if they exist
-            if row_dict.get('tags'):
-                try:
-                    # Remove curly braces and quotes
-                    tags_str = row_dict['tags'].strip('{}')
-                    if tags_str:
-                        # Split by comma and remove quotes
-                        row_dict['tags'] = [tag.strip('"\'') for tag in tags_str.split(',')]
-                    else:
-                        row_dict['tags'] = []
+                    metric['meta'] = json.loads(metric['meta'])
                 except:
-                    row_dict['tags'] = []
-            else:
-                row_dict['tags'] = []
-                
-            results.append(row_dict)
-            
-        return results
+                    pass
+            metrics.append(metric)
+        
+        return {
+            "metrics": metrics,
+            "total": total
+        }
         
     except sqlite3.DatabaseError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @metrics_router.get("/metrics/{metric_id}")
@@ -181,11 +177,20 @@ def get_span_metrics(
     try:
         print(f"Fetching metrics for span ID: {span_id}")
         # Directly call list_metrics with the parameters
-        return list_metrics(
+        result = list_metrics(
             parent_id=span_id,
             parent_type="span",
             metric_name=metric_name
         )
+        
+        # Ensure we return an object with metrics array and total count
+        if isinstance(result, dict) and "metrics" in result:
+            return result
+        elif isinstance(result, list):
+            return {"metrics": result, "total": len(result)}
+        else:
+            return {"metrics": [], "total": 0}
+            
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

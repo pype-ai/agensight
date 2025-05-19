@@ -72,7 +72,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({ metric }) => {
           "bg-red-500/10 text-red-500"
         }
       >
-        {(metric.score * 100).toFixed(0)}%
+        {metric.score.toFixed(2)}
       </Badge>
     </div>
   );
