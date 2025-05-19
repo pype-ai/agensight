@@ -81,12 +81,17 @@ if __name__ == "__main__":
     main()
 ```
 
-## Evaluate Your Agent 
+## Evaluating Modular Components
 
-automatically evaluate your agent's outputs by attaching evaluation metrics to a span. use the GEvalEvaluator to assess custom criteria.
+### GEval: Custom Evaluation Metrics for LLM Applications
+
+You can automatically evaluate any component of your LLM application by attaching custom evaluation metrics to a span using the @span decorator. This allows you to assess agent responses  with metrics such as factual accuracy, helpfulness, or any custom criteria you define.
+
 
 ```python
 # Define evaluation metrics
+from agensight.eval.g_eval import GEvalEvaluator
+
 factual_accuracy = GEvalEvaluator(
     name="Factual Accuracy",
     criteria="Evaluate whether the actual output contains factually accurate information based on the expected output.",
