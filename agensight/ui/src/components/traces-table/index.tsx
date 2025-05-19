@@ -29,19 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@/components/ui/tabs";
 import { columns } from "./columns";
 
@@ -54,7 +45,7 @@ function DraggableRow({ row, onRowClick }: { row: Row<TraceItem>; onRowClick: (i
 
   const latency = Number(row.original.ended_at) - Number(row.original.started_at);
   const handleRowClick = () => {
-    onRowClick(row.original.id,row.original.name,latency.toFixed(2).toString(),row.original.total_tokens.toString());
+    onRowClick(row.original.id,row.original.name,latency.toFixed(2).toString(),row.original.total_tokens?.toString());
   };
 
   return (

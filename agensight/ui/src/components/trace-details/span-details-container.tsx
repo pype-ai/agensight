@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { IconClock, IconChartBar, IconCode } from "@tabler/icons-react";
 import SpanDetailsView from "./span-details";
 import { MetricsList } from "../metrics/metrics-list";
-import { Metric } from "@/lib/services/metrics";
+import { Metric, MetricsResponse } from "@/lib/services/metrics";
 
 export interface SpanDetailsContainerProps {
   span: Span | null;
   isSpanLoading: boolean;
-  metrics: Metric[] | undefined |  null; 
+  metrics: MetricsResponse | undefined | null;
   isMetricsLoading: boolean;
   formatDuration: (duration: number) => string;
   formatTime: (timestamp: number) => string;
@@ -31,7 +31,7 @@ export const SpanDetailsContainer: React.FC<SpanDetailsContainerProps> = ({
 
   // Close metrics dropdown when no metrics are available
   useEffect(() => {
-    if (!isMetricsLoading && (!metrics || metrics.length === 0)) {
+    if (!isMetricsLoading && (!metrics?.metrics || metrics.metrics.length === 0)) {
       setMetricsExpanded(false);
     }
   }, [metrics, isMetricsLoading]);
@@ -100,7 +100,7 @@ export const SpanDetailsContainer: React.FC<SpanDetailsContainerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <IconChartBar size={16} className="text-muted-foreground" />
-                <h3 className="text-sm font-medium">Metrics {metrics?.length ? `(${metrics.length})` : ''}</h3>
+                <h3 className="text-sm font-medium">Metrics {metrics?.metrics?.length ? `(${metrics.metrics.length})` : ''}</h3>
               </div>
               <div className={`transform transition-transform ${metricsExpanded ? 'rotate-90' : ''}`}>▶</div>
             </div>
@@ -108,7 +108,7 @@ export const SpanDetailsContainer: React.FC<SpanDetailsContainerProps> = ({
             {metricsExpanded && (
               <div className="mt-2 mb-6">
                 <MetricsList 
-                  metrics={metrics || []} 
+                  metrics={metrics?.metrics || []} 
                   isLoading={isMetricsLoading} 
                 />
               </div>
