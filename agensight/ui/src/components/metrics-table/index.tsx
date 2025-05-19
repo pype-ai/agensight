@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import Image from "next/image"
 
 export function MetricsTable() {
   const {
@@ -34,35 +35,38 @@ export function MetricsTable() {
   } = useMetricsColumn()
 
   return (
-    <div className="border rounded-lg flex flex-col bg-card/50 backdrop-blur-sm h-[550px] pb-0">
+    <div className="border rounded-lg flex flex-col  backdrop-blur-sm h-[550px] pb-0">
       <ScrollArea className="h-[calc(100%-56px)]">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-muted border-b">
             <TableRow className="hover:bg-muted/50">
-              <TableHead className="w-[200px] text-base font-semibold px-4 py-3">Metric Name</TableHead>
-              <TableHead className="w-[100px] text-base font-semibold px-4 py-3">Score</TableHead>
-              <TableHead className="w-[300px] text-base font-semibold px-4 py-3">Reason</TableHead>
-              <TableHead className="w-[150px] text-base font-semibold px-4 py-3">Parent ID</TableHead>
-              <TableHead className="w-[150px] text-base font-semibold px-4 py-3">Time</TableHead>
+              <TableHead className="w-[150px] text-base font-semibold px-4 py-3 text-left whitespace-nowrap">Parent ID</TableHead>
+              <TableHead className="w-[150px] text-base font-semibold px-4 py-3 text-left whitespace-nowrap">Created At</TableHead>
+              <TableHead className="w-[200px] text-base font-semibold px-4 py-3 text-left whitespace-nowrap">Metric Name</TableHead>
+              <TableHead className="w-[100px] text-base font-semibold px-4 py-3 text-left whitespace-nowrap">Score</TableHead>
+              <TableHead className="w-[300px] text-base font-semibold px-4 py-3 text-left whitespace-nowrap">Reason</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <div className="flex items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                <TableCell colSpan={5} className="h-[550px] text-center">
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                   </div>
                 </TableCell>
               </TableRow>
-            ) : !metrics || metrics.length === 0 ? (
+            ) : metrics.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <p className="text-base font-medium text-muted-foreground">No metrics found</p>
-                    <p className="text-sm text-muted-foreground/80">
-                      Run some evaluations to see metrics here
-                    </p>
+                <TableCell colSpan={5} className="h-[500px] text-center">
+                  <div className="flex items-center justify-center h-full">
+                    <div>
+                      <Image src="/pype-logo.png" alt="PYPE Logo" width={100} height={100} className="h-12 w-20 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium">No metrics available</h3>
+                      <p className="text-muted-foreground mt-2">
+                        Metrics data will appear here when you run evaluations
+                      </p>
+                    </div>
                   </div>
                 </TableCell>
               </TableRow>
@@ -72,11 +76,13 @@ export function MetricsTable() {
                   key={metric.id}
                   className="hover:bg-primary/5 even:bg-muted/30 transition-colors"
                 >
-                  <TableCell className="px-4 py-3 text-base font-medium">{metric.metricName}</TableCell>
-                  <TableCell className="px-4 py-3">
-                    <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-sm font-medium bg-${getScoreColor(metric.score)}-100/80 text-${getScoreColor(metric.score)}-900 dark:bg-${getScoreColor(metric.score)}-900/30 dark:text-${getScoreColor(metric.score)}-400`}>
-                      {formatScore(metric.score)}
-                    </span>
+                  <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground whitespace-nowrap">{metric.parentId}</TableCell>
+                  <TableCell className="px-4 py-3 text-base text-muted-foreground whitespace-nowrap">
+                    {new Date(metric.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-base font-medium whitespace-nowrap">{metric.metricName}</TableCell>
+                  <TableCell className="px-4 py-3 text-base whitespace-nowrap">
+                    {formatScore(metric.score)}
                   </TableCell>
                   <TableCell className="px-4 py-3 w-[300px]">
                     <TooltipProvider>
@@ -91,10 +97,6 @@ export function MetricsTable() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{metric.parentId}</TableCell>
-                  <TableCell className="px-4 py-3 text-base text-muted-foreground">
-                    {new Date(metric.createdAt).toLocaleString()}
                   </TableCell>
                 </TableRow>
               ))
