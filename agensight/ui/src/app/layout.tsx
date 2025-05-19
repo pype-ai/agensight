@@ -3,9 +3,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { HeaderWrapper } from "@/components/HeaderWrapper";
 import { QueryProvider } from "@/components/QueryProvider";
 
+
+export const metadata: Metadata = {
+  title: 'Dashboard - Agensight',
+  description: 'Agensight Dashboard - Monitor and analyze your application traces',
+};
 
 export default function RootLayout({
   children,
@@ -17,9 +21,7 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <QueryProvider>
-            <HeaderWrapper>
               {children}
-            </HeaderWrapper>
             <Toaster />
           </QueryProvider>
         </ThemeProvider>
