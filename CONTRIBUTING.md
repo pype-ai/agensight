@@ -1,6 +1,6 @@
 # Contributing to Agensight
 
-Thank you for your interest in contributing to Agensight! We appreciate your help in making the project better.
+Thank you for your interest in contributing to Agensight! This document provides guidelines and instructions for contributing to the project.
 
 ## 📜 Code of Conduct
 
