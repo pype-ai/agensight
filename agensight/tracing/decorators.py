@@ -160,7 +160,7 @@ def span(
                     if hasattr(metric, "criteria"):
                         config["criteria"] = metric.criteria
                     if hasattr(metric, "model"):
-                        config["model"] = metric.model
+                        config["model"] = metric.model.get_model_name() if hasattr(metric.model, "get_model_name") else str(metric.model)
                     if hasattr(metric, "threshold"):
                         config["threshold"] = metric.threshold
                     if hasattr(metric, "strict_mode"):

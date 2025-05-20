@@ -1,4 +1,4 @@
-class ResponseEvalTemplate:
+class GEvalTemplate:
     @staticmethod
     def get_template(criteria, params_description, evaluation_steps=None):
         if evaluation_steps:

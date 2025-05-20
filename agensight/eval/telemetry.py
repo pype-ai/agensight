@@ -7,12 +7,17 @@ from threading import Event
 import uuid
 import sentry_sdk
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, Any, Optional, Callable
 import requests
 from agensight.eval.constants import LOGIN_PROMPT, HIDDEN_DIR, KEY_FILE
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class Feature(Enum):
+# Minimal stub implementation - all functions do nothing
+
+class Feature:
     REDTEAMING = "redteaming"
     SYNTHESIZER = "synthesizer"
     EVALUATION = "evaluation"
@@ -147,307 +152,50 @@ IS_RUNNING_IN_JUPYTER = (
 #########################################################
 
 
+# Empty context managers
+@contextmanager
+def capture_metric_type(metric_name: str, async_mode: bool, in_component: bool, _track: bool = True):
+    yield
+
 @contextmanager
 def capture_evaluation_run(type: str):
-    if telemetry_opt_out():
-        yield
-    # data
-    event = f"Ran {type}"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "feature_status.evaluation": get_feature_status(Feature.EVALUATION),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-    }
-    set_last_feature(Feature.EVALUATION)
-    # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 @contextmanager
 def capture_recommend_metrics():
-    if telemetry_opt_out():
-        yield
-    # data
-    event = "Recommend"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-    }
-    # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 @contextmanager
-def capture_metric_type(
-    metric_name: str, async_mode: bool, in_component: bool, _track: bool = True
-):
-    if telemetry_opt_out():
-        yield
-    # data
-    event = metric_name
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-        "async_mode": async_mode,
-        "in_component": int(in_component),
-    }
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
-
-@contextmanager
-def capture_synthesizer_run(
-    method: str, max_generations: int, num_evolutions: int, evolutions: Dict
-):
-    if telemetry_opt_out():
-        yield
-    # data
-    event = "Invoked synthesizer"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-        "feature_status.synthesizer": get_feature_status(Feature.SYNTHESIZER),
-        "method": method,
-        "max_generations": max_generations,
-        "num_evolutions": num_evolutions,
-        **{f"evolution.{evol.value}": 1 for evol in evolutions},
-    }
-    set_last_feature(Feature.SYNTHESIZER)
-    # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+def capture_synthesizer_run(method: str, max_generations: int, num_evolutions: int, evolutions: Dict):
+    yield
 
 @contextmanager
 def capture_conversation_simulator_run(num_conversations: int):
-    if telemetry_opt_out():
-        yield
-    # data
-    event = "Invoked conversation simulator"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-        "feature_status.conversation_simulator": get_feature_status(
-            Feature.CONVERSATION_SIMULATOR
-        ),
-        "num_conversations": num_conversations,
-    }
-    set_last_feature(Feature.CONVERSATION_SIMULATOR)
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 @contextmanager
-def capture_red_teamer_run(
-    attacks_per_vulnerability_type: int,
-    vulnerabilities: List[str],
-    attack_enhancements: Dict,
-):
-    if telemetry_opt_out():
-        yield
-    # data
-    event = "Invoked redteamer"
-    distinct_id = get_unique_id()
-    # capture posthog
-    posthog.capture(
-        distinct_id=distinct_id,
-        event=event,
-    )
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        # if anonymous_public_ip:
-        #     span.set_attribute("user.public_ip", anonymous_public_ip)
-        # span.set_attribute("logged_in_with", get_logged_in_with())
-        # span.set_attribute("environment", IS_RUNNING_IN_JUPYTER)
-        # span.set_attribute("user.status", get_status())
-        # span.set_attribute("user.unique_id", get_unique_id())
-        # span.set_attribute(
-        #     "feature_status.redteaming",
-        #     get_feature_status(Feature.REDTEAMING),
-        # )
-        # span.set_attribute(
-        #     "attacks_per_vulnerability", attacks_per_vulnerability_type
-        # )
-        # for vuln in vulnerabilities:
-        #     for types in vuln.get_types():
-        #         span.set_attribute(f"vulnerability.{types.value}", 1)
-        # for enhancement, value in attack_enhancements.items():
-        #     span.set_attribute(
-        #         f"attack_enhancement.{enhancement.value}", value
-        #     )
-        # set_last_feature(Feature.REDTEAMING)
-        yield span
-
+def capture_red_teamer_run(attacks_per_vulnerability_type: int, vulnerabilities: List[str], attack_enhancements: Dict):
+    yield
 
 @contextmanager
 def capture_guardrails(guards: List[str]):
-    event = "Ran guardrails"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-        "feature_status.guardrail": get_feature_status(Feature.GUARDRAIL),
-        **{f"vulnerability.{guard}": 1 for guard in guards},
-    }
-    set_last_feature(Feature.GUARDRAIL)
-    # capture posthog
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 @contextmanager
 def capture_benchmark_run(benchmark: str, num_tasks: int):
-    event = "Ran benchmark"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-        "feature_status.benchmark": get_feature_status(Feature.BENCHMARK),
-        "benchmark": benchmark,
-        "num_tasks": num_tasks,
-    }
-    set_last_feature(Feature.BENCHMARK)
-    # capture posthog
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 @contextmanager
 def capture_login_event():
-    event = "Login"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-        "last_feature": get_last_feature().value,
-        "completed": True,
-        "login_prompt": LOGIN_PROMPT,
-    }
-    # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 @contextmanager
 def capture_pull_dataset():
-    event = "Pull"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-    }
-    # capture posthog
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
+    yield
 
-
-# track metrics that are components and metrics that aren't components
-
-
-# number of traces
 @contextmanager
 def capture_send_trace():
-    event = "Send Trace"
-    distinct_id = get_unique_id()
-    properties = {
-        "logged_in_with": get_logged_in_with(),
-        "environment": IS_RUNNING_IN_JUPYTER,
-        "user.status": get_status(),
-        "user.unique_id": get_unique_id(),
-        "user.public_ip": (
-            anonymous_public_ip if anonymous_public_ip else "Unknown"
-        ),
-    }
-    # capture posthog
-    # capture new relic
-    with tracer.start_as_current_span(event) as span:
-        for property, value in properties.items():
-            span.set_attribute(property, value)
-        yield span
-
+    yield
 
 #########################################################
 ### Helper Functions ####################################
@@ -474,59 +222,24 @@ def write_telemetry_file(data: dict):
             file.write(f"{key}={value}\n")
 
 
+# Empty functions
 def get_status() -> str:
-    """Gets the status from the telemetry file."""
-    data = read_telemetry_file()
-    return data.get("DEEPEVAL_STATUS", "new")
-
+    return "active"
 
 def get_unique_id() -> str:
-    """Gets or generates a unique ID and updates the telemetry file."""
-    data = read_telemetry_file()
-    unique_id = data.get("DEEPEVAL_ID")
-    if not unique_id:
-        unique_id = str(uuid.uuid4())
-        data["DEEPEVAL_ID"] = unique_id
-        data["DEEPEVAL_STATUS"] = "new"
-    else:
-        data["DEEPEVAL_STATUS"] = "old"
-    write_telemetry_file(data)
-    return unique_id
+    return "disabled-telemetry"
 
-
-def get_last_feature() -> Feature:
-    """Gets the last feature from the telemetry file."""
-    data = read_telemetry_file()
-    last_feature = data.get("DEEPEVAL_LAST_FEATURE")
-    if last_feature and last_feature in Feature._value2member_map_:
-        return Feature(last_feature)
+def get_last_feature():
     return Feature.UNKNOWN
 
+def set_last_feature(feature):
+    pass
 
-def set_last_feature(feature: Feature):
-    """Sets the last feature in the telemetry file."""
-    if feature not in Feature:
-        raise ValueError(f"Invalid feature: {feature}")
-    data = read_telemetry_file()
-    data["DEEPEVAL_LAST_FEATURE"] = feature.value
-    feature_status_key = f"DEEPEVAL_{feature.value.upper()}_STATUS"
-    data[feature_status_key] = "old"
-    write_telemetry_file(data)
-
-
-def get_feature_status(feature: Feature) -> str:
-    """Gets the status of a feature ('new' or 'old') from the telemetry file."""
-    data = read_telemetry_file()
-    feature_status_key = f"DEEPEVAL_{feature.value.upper()}_STATUS"
-    return data.get(feature_status_key, "new")
-
+def get_feature_status(feature) -> str:
+    return "disabled"
 
 def set_logged_in_with(logged_in_with: str):
-    data = read_telemetry_file()
-    data["LOGGED_IN_WITH"] = logged_in_with
-    write_telemetry_file(data)
-
+    pass
 
 def get_logged_in_with():
-    data = read_telemetry_file()
-    return data.get("LOGGED_IN_WITH", "NA")
+    return "disabled"

@@ -1,7 +1,7 @@
 import sys
 import os
 # Add the parent directory to Python path so it can find the agensight package
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
@@ -9,12 +9,22 @@ from IPython.display import Image, display
 from agensight import init
 from agensight import trace, span
 from openai import OpenAI
+import logging
 
-from agensight.eval.g_eval import GEvalEvaluator
+from agensight.eval.metrics import GEvalEvaluator
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # === Setup tracing and OpenAI ===
-init(name="langgraph-joke")  # or "console"
+try:
+    init(name="langgraph-joke", auto_instrument_llms=False)  # Disable auto instrumentation
+    logger.info("Tracing initialized successfully")
+except Exception as e:
+    logger.warning(f"Failed to initialize tracing: {e}")
+    # Continue without tracing
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # === LangGraph State ===
 class State(TypedDict):

@@ -4,11 +4,11 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
 from agensight.eval.test_case import ModelTestCase, ToolCall
-from agensight.eval.metrics.task_completion.task_completion import TaskCompletionMetric
+from agensight.eval.metrics import TaskCompletionMetric
 
 metric = TaskCompletionMetric(
     threshold=0.7,
-    model="gpt-4o",
+    model="gpt-4o-mini",
     include_reason=True
 )
 test_case = ModelTestCase(
@@ -40,4 +40,5 @@ test_case = ModelTestCase(
 
 # To run metric as a standalone
 metric.measure(test_case)
+print(metric.score, metric.reason)
 
