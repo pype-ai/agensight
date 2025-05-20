@@ -1,16 +1,24 @@
 # Contributing to Agensight
 
-Thank you for your interest in contributing to Agensight! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Agensight! We appreciate your help in making the project better.
 
-## Code of Conduct
+## 📜 Code of Conduct
 
 Please read and follow our [Code of Conduct](./CODE_OF_CONDUCT.md) to foster an inclusive and respectful community.
 
-## Getting Started
+---
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally
-3. **Set up the development environment**:
+## 🚀 Getting Started
+
+### Development Environment
+
+1. **Create a virtual environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+2. **Install the package in development mode**:
    ```bash
    # Install development dependencies
    pip install -e ".[dev]"
@@ -19,22 +27,57 @@ Please read and follow our [Code of Conduct](./CODE_OF_CONDUCT.md) to foster an 
    pre-commit install
    ```
 
-## Development Workflow
+### Branching
 
-### Environment Setup
+Please create branches following this naming convention:
 
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```
+<prefix>/<issue-number>-short-description
+```
 
-2. Install the package in development mode:
-   ```bash
-   pip install -e .
-   ```
+Where `<prefix>` is one of:
 
-### Running Tests
+- `feat` — for new features  
+- `fix` — for bug fixes  
+- `chore` — maintenance and config  
+- `docs` — documentation changes  
+- `refactor` — code restructuring  
+- `test` — adding or updating tests  
+- `ci` — continuous integration related
+
+Example branch names:
+
+```
+feat/42-login-flow
+fix/105-typo-on-dashboard
+```
+
+---
+
+## 🐛 Issues
+
+We use the following issue types (labels):
+
+- `bug` — Something isn't working  
+- `feature` — New feature requests  
+- `enhancement` — Improvements to existing features  
+- `documentation` — Documentation updates  
+- `question` — General questions  
+- `good first issue` — Great for newcomers  
+- `help wanted` — Needs community assistance  
+- `needs discussion` — Requires further input  
+
+Please use the provided issue templates when opening new issues to help us understand and triage them quickly.
+
+---
+
+## 💡 Before Starting Work
+
+If you want to work on a **large or complex change**, please open an issue first or start a discussion. This helps avoid duplicated work and ensures alignment with project goals.
+
+---
+
+## 🧪 Running Tests
 
 Run the test suite:
 ```bash
@@ -46,46 +89,78 @@ Run tests with coverage:
 pytest --cov=agensight tests/
 ```
 
-### Development Guidelines
+---
 
-#### Code Style
+## 🔧 Pull Requests
 
-- Follow PEP 8 for Python code
-- Use snake_case for Python functions and variables
-- Use PascalCase for component names in React/TypeScript
-- Add type annotations to all Python functions
+### PR Title
 
-#### Pull Request Process
+Make sure your PR title is **clear and descriptive**, explaining what the change does.
 
-1. **Create a feature branch**:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+Examples:
 
-2. **Make your changes** and write tests if applicable
+- `Fix: Evaluation page layout`  
+- `Add: onboarding flow for new users`  
+- `Improve: loading speed of traces table`
 
-3. **Ensure all tests pass**:
-   ```bash
-   pytest
-   ```
+We follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
 
-4. **Update documentation** if necessary
+---
 
-5. **Commit your changes** with meaningful commit messages:
-   ```bash
-   git commit -m "feat: Add new feature for xyz"
-   ```
-   
-   We follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
+### PR Template
 
-6. **Push to your fork**:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+When creating a PR, please use the following template:
 
-7. **Create a pull request** to the main repository's `main` branch
+```md
+## 🔗 Issue
 
-## Project Structure
+Closes #<issue-number>
+
+---
+
+## ✨ Summary
+
+<!-- Provide a short summary of the changes -->
+
+---
+
+## 🖼️ Screenshots (if UI changes)
+
+<!-- Add before/after screenshots -->
+
+---
+
+## 🧪 Steps to Test
+
+1. Go to '...'
+2. Click on '...'
+3. Verify that '...'
+
+---
+
+## ✅ Checklist
+
+- [ ] My code builds and runs locally
+- [ ] I added/updated tests
+- [ ] I updated relevant documentation
+- [ ] I linked the issue correctly (`Closes #issue-id`)
+```
+
+This template will be automatically applied to all new pull requests.
+
+---
+
+## 🛠 Code Quality
+
+- Please run linting and formatting checks locally before submitting your code (e.g., `npm run lint`).
+- Write tests for your changes where applicable.
+- Follow these code style guidelines:
+  - **Python**: Follow PEP 8, use snake_case for functions and variables, add type annotations
+  - **React/TypeScript**: Use PascalCase for component names
+
+---
+
+## 📋 Project Structure
 
 ```
 agensight/
@@ -99,25 +174,9 @@ agensight/
 └── tests/             # Test suite
 ```
 
-## Adding New Features
+---
 
-When adding new features, please:
-
-1. **Discuss first** by opening an issue to discuss your proposed feature
-2. **Add tests** that verify your feature works as expected
-3. **Update documentation** to reflect your changes
-4. **Follow the package structure** and code style guidelines
-
-## Reporting Issues
-
-When reporting issues, please include:
-
-- **A descriptive title** and clear description
-- **Steps to reproduce** the issue
-- **Expected behavior** vs. actual behavior
-- **Your environment** (OS, Python version, package versions)
-
-## Documentation
+## 📚 Documentation
 
 We use Markdown for documentation. To build the docs locally:
 
@@ -129,8 +188,31 @@ mkdocs serve
 
 Then visit http://localhost:8000 to see the documentation site.
 
-## License
+---
+
+## 📦 Releases and Changelogs
+
+Maintainers handle changelog updates, version bumps, and major documentation changes. Contributors do not need to worry about this.
+
+---
+
+## 📋 Future Improvements (TODOs)
+
+- Enforce **conventional commit messages** for better changelog generation  
+- Add **CI checks** for automated linting and tests  
+- Update **Code of Conduct** to ensure a welcoming community  
+
+---
+
+## 📄 License
 
 By contributing to Agensight, you agree that your contributions will be licensed under the project's [MIT License](./LICENSE).
 
-Thank you for contributing to Agensight! 
+---
+
+Thank you for contributing to Agensight!  
+We appreciate your time and effort.
+
+---
+
+*— The Agensight Team*
