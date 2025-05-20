@@ -204,7 +204,7 @@ Agensight uses a configuration file (`agensight.config.json` by default) to defi
 
 ## Contributing
 
-Open source contributions are welcome. Open an issue or submit a PR via GitHub.
+Open source contributions are welcome! Please see our [Contributing Guide](./CONTRIBUTING.md) for details on how to get started, coding standards, and our development workflow.
 
 ### Development Workflow
 
