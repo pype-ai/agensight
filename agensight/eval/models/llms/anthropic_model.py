@@ -3,9 +3,9 @@ from anthropic import Anthropic, AsyncAnthropic
 from pydantic import BaseModel
 import os
 
-from eval.models import DeepEvalBaseLLM
-from eval.models.llms.utils import trim_and_load_json
-from eval.models.utils import parse_model_name
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.models.llms.utils import trim_and_load_json
+from agensight.eval.models.utils import parse_model_name
 
 model_pricing = {
     "claude-3-7-sonnet-latest": {"input": 3.00 / 1e6, "output": 15.00 / 1e6},

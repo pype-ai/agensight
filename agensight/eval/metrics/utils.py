@@ -3,38 +3,35 @@ import json
 import re
 import sys
 from typing import Any, Dict, Optional, List, Union, Tuple
-from deepeval.errors import MissingTestCaseParamsError
-from eval.key_handler import KEY_FILE_HANDLER, KeyValues
-from eval.models import (
+from agensight.eval.errors import MissingTestCaseParamsError
+from agensight.eval.key_handler import KEY_FILE_HANDLER, KeyValues
+from agensight.eval.models import (
     DeepEvalBaseLLM,
     DeepEvalBaseMLLM,
     GPTModel,
     AnthropicModel,
     AzureOpenAIModel,
-    OllamaModel,
     LocalModel,
     OpenAIEmbeddingModel,
     AzureOpenAIEmbeddingModel,
-    OllamaEmbeddingModel,
     LocalEmbeddingModel,
     GeminiModel,
     MultimodalOpenAIModel,
     MultimodalGeminiModel,
-    MultimodalOllamaModel,
-    AmazonBedrockModel,
+
 )
-from deepeval.key_handler import KeyValues, KEY_FILE_HANDLER
+from agensight.eval.key_handler import KeyValues, KEY_FILE_HANDLER
 
 
-from deepeval.metrics import (
+from agensight.eval.metrics import (
     BaseMetric,
     BaseConversationalMetric,
     BaseMultimodalMetric,
 )
-from deepeval.models.base_model import DeepEvalBaseEmbeddingModel
-from deepeval.test_case import (
-    LLMTestCase,
-    LLMTestCaseParams,
+from agensight.eval.models.base_model import DeepEvalBaseEmbeddingModel
+from agensight.eval.test_case import (
+    ModelTestCase,
+    ModelTestCaseParams,
     MLLMTestCase,
     MLLMTestCaseParams,
     ConversationalTestCase,
@@ -68,7 +65,7 @@ def copy_metrics(
 
 
 def format_turns(
-    llm_test_cases: List[LLMTestCase], test_case_params: List[LLMTestCaseParams]
+    llm_test_cases: List[ModelTestCase], test_case_params: List[ModelTestCaseParams]
 ) -> List[Dict[str, Union[str, List[str]]]]:
     res = []
     for llm_test_case in llm_test_cases:
@@ -82,8 +79,8 @@ def format_turns(
 
 
 def process_llm_test_cases_windows(
-    llm_test_cases_windows: List[List[LLMTestCase]],
-    test_case_params: List[LLMTestCaseParams],
+    llm_test_cases_windows: List[List[ModelTestCase]],
+    test_case_params: List[ModelTestCaseParams],
 ) -> List[List[Dict[str, str]]]:
     res = []
     for llm_test_cases_window in llm_test_cases_windows:
@@ -99,7 +96,7 @@ def process_llm_test_cases_windows(
     return res
 
 
-def get_turns_in_sliding_window(turns: List[LLMTestCase], window_size: int):
+def get_turns_in_sliding_window(turns: List[ModelTestCase], window_size: int):
     for i in range(len(turns)):
         yield turns[max(0, i - window_size + 1) : i + 1]
 
@@ -132,7 +129,7 @@ def construct_verbose_logs(metric: BaseMetric, steps: List[str]) -> str:
 
 def check_conversational_test_case_params(
     test_case: ConversationalTestCase,
-    test_case_params: List[LLMTestCaseParams],
+    test_case_params: List[ModelTestCaseParams],
     metric: BaseConversationalMetric,
     require_chatbot_role: bool = False,
 ):
@@ -176,12 +173,12 @@ def check_conversational_test_case_params(
 
 
 def check_llm_test_case_params(
-    test_case: LLMTestCase,
-    test_case_params: List[LLMTestCaseParams],
+    test_case: ModelTestCase,
+    test_case_params: List[ModelTestCaseParams],
     metric: BaseMetric,
 ):
-    if isinstance(test_case, LLMTestCase) is False:
-        error_str = f"Unable to evaluate test cases that are not of type 'LLMTestCase' using the non-conversational '{metric.__name__}' metric."
+    if isinstance(test_case, ModelTestCase) is False:
+        error_str = f"Unable to evaluate test cases that are not of type 'ModelTestCase' using the non-conversational '{metric.__name__}' metric."
         metric.error = error_str
         raise ValueError(error_str)
 
@@ -325,8 +322,6 @@ def initialize_model(
         return model, False
     if should_use_gemini_model():
         return GeminiModel(), True
-    if should_use_ollama_model():
-        return OllamaModel(), True
     elif should_use_local_model():
         return LocalModel(), True
     elif should_use_azure_openai():
@@ -347,10 +342,8 @@ def is_native_model(
         isinstance(model, GPTModel)
         or isinstance(model, AnthropicModel)
         or isinstance(model, AzureOpenAIModel)
-        or isinstance(model, OllamaModel)
         or isinstance(model, LocalModel)
         or isinstance(model, GeminiModel)
-        or isinstance(model, AmazonBedrockModel)
     ):
         return True
     else:
@@ -374,8 +367,6 @@ def initialize_multimodal_model(
         return model, False
     if should_use_gemini_model():
         return MultimodalGeminiModel(), True
-    if should_use_ollama_model():
-        return MultimodalOllamaModel(), True
     elif isinstance(model, str) or model is None:
         return MultimodalOpenAIModel(model=model), True
     raise TypeError(
@@ -388,7 +379,6 @@ def is_native_mllm(
 ) -> bool:
     if (
         isinstance(model, MultimodalOpenAIModel)
-        or isinstance(model, MultimodalOllamaModel)
         or isinstance(model, MultimodalGeminiModel)
     ):
         return True
@@ -421,8 +411,6 @@ def initialize_embedding_model(
 ) -> DeepEvalBaseEmbeddingModel:
     if isinstance(model, DeepEvalBaseEmbeddingModel):
         return model
-    if should_use_ollama_embedding():
-        return OllamaEmbeddingModel()
     elif should_use_local_embedding():
         return LocalEmbeddingModel()
     elif should_use_azure_openai_embedding():

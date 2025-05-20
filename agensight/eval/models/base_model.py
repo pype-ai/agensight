@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, List
-from eval.models.utils import parse_model_name
+from agensight.eval.models.utils import parse_model_name
 
 
 class DeepEvalBaseModel(ABC):

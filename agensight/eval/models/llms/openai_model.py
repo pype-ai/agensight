@@ -12,9 +12,9 @@ from tenacity import (
     RetryCallState,
 )
 
-from eval.models import DeepEvalBaseLLM
-from eval.models.llms.utils import trim_and_load_json
-from eval.models.utils import parse_model_name
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.models.llms.utils import trim_and_load_json
+from agensight.eval.models.utils import parse_model_name
 
 
 def log_retry_error(retry_state: RetryCallState):

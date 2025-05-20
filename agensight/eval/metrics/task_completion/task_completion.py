@@ -1,30 +1,30 @@
 from typing import Optional, List, Tuple, Union
 
-from metrics.utils import get_or_create_event_loop, prettify_list
-from metrics.utils import (
+from agensight.eval.utils import get_or_create_event_loop, prettify_list
+from agensight.eval.metrics.utils import (
     construct_verbose_logs,
     trimAndLoadJson,
     check_llm_test_case_params,
     initialize_model,
 )
 from agensight.eval.test_case import (
-    LLMTestCase,
-    LLMTestCaseParams,
+    ModelTestCase,
+    ModelTestCaseParams,
     ConversationalTestCase,
 )
-from metrics import BaseMetric
-from eval.models import DeepEvalBaseLLM
-from metrics.task_completion.template import TaskCompletionTemplate
-from metrics.indicator import metric_progress_indicator
-from metrics.task_completion.schema import *
+from agensight.eval.metrics import BaseMetric
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.metrics.task_completion.template import TaskCompletionTemplate
+from agensight.eval.metrics.indicator import metric_progress_indicator
+from agensight.eval.metrics.task_completion.schema import *
 
 
 class TaskCompletionMetric(BaseMetric):
 
-    _required_params: List[LLMTestCaseParams] = [
-        LLMTestCaseParams.INPUT,
-        LLMTestCaseParams.ACTUAL_OUTPUT,
-        LLMTestCaseParams.TOOLS_CALLED,
+    _required_params: List[ModelTestCaseParams] = [
+        ModelTestCaseParams.INPUT,
+        ModelTestCaseParams.ACTUAL_OUTPUT,
+        ModelTestCaseParams.TOOLS_CALLED,
     ]
 
     def __init__(
@@ -46,7 +46,7 @@ class TaskCompletionMetric(BaseMetric):
 
     def measure(
         self,
-        test_case: Union[LLMTestCase, ConversationalTestCase],
+        test_case: Union[ModelTestCase, ConversationalTestCase],
         _show_indicator: bool = True,
         _in_component: bool = False,
     ) -> float:
@@ -90,7 +90,7 @@ class TaskCompletionMetric(BaseMetric):
 
     async def a_measure(
         self,
-        test_case: Union[LLMTestCase, ConversationalTestCase],
+        test_case: Union[ModelTestCase, ConversationalTestCase],
         _show_indicator: bool = True,
         _in_component: bool = False,
     ) -> float:
@@ -171,7 +171,7 @@ class TaskCompletionMetric(BaseMetric):
 
     async def _a_extract_goal_and_outcome(
         self,
-        test_case: LLMTestCase,
+        test_case: ModelTestCase,
     ) -> Tuple:
         prompt = TaskCompletionTemplate.extract_goal_and_outcome(
             input=test_case.input,
@@ -197,7 +197,7 @@ class TaskCompletionMetric(BaseMetric):
 
     def _extract_goal_and_outcome(
         self,
-        test_case: LLMTestCase,
+        test_case: ModelTestCase,
     ) -> Tuple:
         prompt = TaskCompletionTemplate.extract_goal_and_outcome(
             input=test_case.input,

@@ -1,12 +1,11 @@
 from typing import Optional, List, Union
 import requests
 from pydantic import BaseModel
-from google.genai import types
-from google import genai
-
-from eval.key_handler import KeyValues, KEY_FILE_HANDLER
-from eval.models.base_model import DeepEvalBaseMLLM
-from eval.test_case import MLLMImage
+import google.generativeai as genai
+from google.generativeai import types
+from agensight.eval.key_handler import KeyValues, KEY_FILE_HANDLER
+from agensight.eval.models.base_model import DeepEvalBaseMLLM
+from agensight.eval.test_case import MLLMImage
 
 
 default_multimodal_gemini_model = "gemini-1.5-pro"
@@ -28,7 +27,7 @@ class MultimodalGeminiModel(DeepEvalBaseMLLM):
 
     Example:
         ```python
-        from deepeval.models import MultimodalGeminiModel
+        from eval.models import MultimodalGeminiModel
 
         # Initialize the model
         model = MultimodalGeminiModel(

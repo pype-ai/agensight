@@ -12,9 +12,9 @@ from tenacity import (
     RetryCallState,
 )
 
-from eval.models import DeepEvalBaseMLLM
-from eval.test_case import MLLMImage
-from eval.models.utils import parse_model_name
+from agensight.eval.models import DeepEvalBaseMLLM
+from agensight.eval.test_case import MLLMImage
+from agensight.eval.models.utils import parse_model_name
 
 retryable_exceptions = (
     openai.RateLimitError,

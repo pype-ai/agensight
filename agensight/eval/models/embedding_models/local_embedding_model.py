@@ -1,8 +1,8 @@
 from openai import OpenAI
 from typing import List
 
-from eval.key_handler import KeyValues, KEY_FILE_HANDLER
-from eval.models import DeepEvalBaseEmbeddingModel
+from agensight.eval.key_handler import KeyValues, KEY_FILE_HANDLER
+from agensight.eval.models import DeepEvalBaseEmbeddingModel
 
 
 class LocalEmbeddingModel(DeepEvalBaseEmbeddingModel):

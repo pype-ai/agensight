@@ -4,9 +4,9 @@ from pydantic import BaseModel
 from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
-from eval.models.llms.utils import trim_and_load_json
-from eval.models import DeepEvalBaseLLM
-from eval.key_handler import KeyValues, KEY_FILE_HANDLER
+from agensight.eval.models.llms.utils import trim_and_load_json
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.key_handler import KeyValues, KEY_FILE_HANDLER
 
 
 class LocalModel(DeepEvalBaseLLM):

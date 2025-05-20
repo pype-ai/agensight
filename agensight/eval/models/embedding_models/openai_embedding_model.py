@@ -1,6 +1,6 @@
 from typing import Optional, List
 from openai import OpenAI, AsyncOpenAI
-from eval.models import DeepEvalBaseEmbeddingModel
+from agensight.eval.models import DeepEvalBaseEmbeddingModel
 
 valid_openai_embedding_models = [
     "text-embedding-3-small",

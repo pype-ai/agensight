@@ -1,10 +1,10 @@
 from pydantic import BaseModel
-from google.genai import types
+import google.generativeai as genai
+from google.generativeai import types
 from typing import Optional
-from google import genai
 
-from deepeval.key_handler import KeyValues, KEY_FILE_HANDLER
-from deepeval.models.base_model import DeepEvalBaseLLM
+from agensight.eval.key_handler import KeyValues, KEY_FILE_HANDLER
+from agensight.eval.models.base_model import DeepEvalBaseLLM
 
 default_gemini_model = "gemini-1.5-pro"
 
@@ -25,7 +25,7 @@ class GeminiModel(DeepEvalBaseLLM):
 
     Example:
         ```python
-        from deepeval.models import GeminiModel
+        from eval.models import GeminiModel
 
         # Initialize the model
         model = GeminiModel(

@@ -12,3 +12,14 @@ anthropic
 starlette
 pydantic
 uuid>=1.30
+numpy
+nltk
+torch
+transformers
+openai
+google-generativeai
+pydantic
+retry
+sentry_sdk
+Dbias  # Optional, for bias detection
+allennlp  # Optional, for decomposable attention model

@@ -1,50 +1,57 @@
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional, Tuple
 
-from deepeval.metrics.indicator import metric_progress_indicator
-from deepeval.metrics.utils import (
+from agensight.eval.metrics.indicator import metric_progress_indicator
+from agensight.eval.metrics.utils import (
     construct_verbose_logs,
     check_llm_test_case_params,
 )
-from deepeval.test_case import (
-    LLMTestCase,
-    LLMTestCaseParams,
+from agensight.eval.test_case import (
+    ModelTestCase,
+    ModelTestCaseParams,
     ConversationalTestCase,
     ToolCallParams,
     ToolCall,
 )
-from deepeval.metrics import BaseMetric
+from agensight.eval.metrics import BaseMetric
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.metrics.tool_correctness.template import ToolCorrectnessTemplate
+from agensight.eval.metrics.utils import get_or_create_event_loop, prettify_list
+from agensight.eval.metrics.utils import trimAndLoadJson
 
 
 class ToolCorrectnessMetric(BaseMetric):
 
-    _required_params: List[LLMTestCaseParams] = [
-        LLMTestCaseParams.INPUT,
-        LLMTestCaseParams.ACTUAL_OUTPUT,
-        LLMTestCaseParams.TOOLS_CALLED,
-        LLMTestCaseParams.EXPECTED_TOOLS,
+    _required_params: List[ModelTestCaseParams] = [
+        ModelTestCaseParams.INPUT,
+        ModelTestCaseParams.ACTUAL_OUTPUT,
+        ModelTestCaseParams.TOOLS_CALLED,
+        ModelTestCaseParams.EXPECTED_TOOLS,
     ]
 
     def __init__(
         self,
         threshold: float = 0.5,
-        evaluation_params: List[ToolCallParams] = [],
+        model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         include_reason: bool = True,
+        async_mode: bool = True,
         strict_mode: bool = False,
         verbose_mode: bool = False,
         should_exact_match: bool = False,
         should_consider_ordering: bool = False,
     ):
         self.threshold = 1 if strict_mode else threshold
+        self.model, self.using_native_model = initialize_model(model)
+        self.evaluation_model = self.model.get_model_name()
         self.include_reason = include_reason
+        self.async_mode = async_mode
         self.strict_mode = strict_mode
         self.verbose_mode = verbose_mode
-        self.evaluation_params: List[ToolCallParams] = evaluation_params
         self.should_exact_match = should_exact_match
         self.should_consider_ordering = should_consider_ordering
 
     def measure(
         self,
-        test_case: Union[LLMTestCase, ConversationalTestCase],
+        test_case: Union[ModelTestCase, ConversationalTestCase],
         _show_indicator: bool = True,
         _in_component: bool = False,
     ) -> float:
@@ -90,7 +97,7 @@ class ToolCorrectnessMetric(BaseMetric):
 
     async def a_measure(
         self,
-        test_case: LLMTestCase,
+        test_case: ModelTestCase,
         _show_indicator: bool = True,
         _in_component: bool = False,
     ) -> float:
@@ -286,3 +293,10 @@ class ToolCorrectnessMetric(BaseMetric):
     def indent_multiline_string(self, s, indent_level=4):
         indent = " " * indent_level
         return "\n".join(f"{indent}{line}" for line in s.splitlines())
+
+    def _extract_tool_correctness(
+        self,
+        test_case: ModelTestCase,
+    ) -> Tuple:
+        # Implementation of _extract_tool_correctness method
+        pass

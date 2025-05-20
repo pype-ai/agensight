@@ -7,15 +7,14 @@ import time
 import asyncio
 from tqdm.asyncio import tqdm_asyncio
 
-from metrics.errors import MissingTestCaseParamsError
-from metrics import (
+from agensight.eval.errors import MissingTestCaseParamsError
+from agensight.eval.metrics import (
     BaseMetric,
     BaseConversationalMetric,
     BaseMultimodalMetric,
 )
-from agensight.eval.test_case import LLMTestCase, ConversationalTestCase, MLLMTestCase
-from metrics.test_run.cache import CachedTestCase, Cache
-from metrics.telemetry import capture_metric_type
+from agensight.eval.test_case import ModelTestCase, ConversationalTestCase, MLLMTestCase
+from agensight.eval.telemetry import capture_metric_type
 
 
 def format_metric_description(
@@ -66,8 +65,7 @@ async def measure_metric_task(
     task_id,
     progress,
     metric: Union[BaseMetric, BaseMultimodalMetric, BaseConversationalMetric],
-    test_case: Union[LLMTestCase, MLLMTestCase, ConversationalTestCase],
-    cached_test_case: Union[CachedTestCase, None],
+    test_case: Union[ModelTestCase, MLLMTestCase, ConversationalTestCase],
     ignore_errors: bool,
     skip_on_missing_params: bool,
     _in_component: bool = False,
@@ -75,11 +73,6 @@ async def measure_metric_task(
     while not progress.finished:
         start_time = time.perf_counter()
         metric_data = None
-        if cached_test_case is not None:
-            # cached test case will always be None for conversational test case (from a_execute_test_cases)
-            cached_metric_data = Cache.get_metric_data(metric, cached_test_case)
-            if cached_metric_data:
-                metric_data = cached_metric_data.metric_data
 
         if metric_data:
             ## only change metric state, not configs
@@ -147,8 +140,7 @@ async def measure_metrics_with_indicator(
     metrics: List[
         Union[BaseMetric, BaseMultimodalMetric, BaseConversationalMetric]
     ],
-    test_case: Union[LLMTestCase, MLLMTestCase, ConversationalTestCase],
-    cached_test_case: Union[CachedTestCase, None],
+    test_case: Union[ModelTestCase, MLLMTestCase, ConversationalTestCase],
     ignore_errors: bool,
     skip_on_missing_params: bool,
     show_indicator: bool,
@@ -175,7 +167,6 @@ async def measure_metrics_with_indicator(
                         progress,
                         metric,
                         test_case,
-                        cached_test_case,
                         ignore_errors,
                         skip_on_missing_params,
                         _in_component=_in_component,
@@ -187,12 +178,6 @@ async def measure_metrics_with_indicator(
         for metric in metrics:
             metric_data = None
             # cached test case will always be None for conversationals
-            if cached_test_case is not None:
-                cached_metric_data = Cache.get_metric_data(
-                    metric, cached_test_case
-                )
-                if cached_metric_data:
-                    metric_data = cached_metric_data.metric_data
 
             if metric_data:
                 ## Here we're setting the metric state from metrics metadata cache,
@@ -224,7 +209,7 @@ async def measure_metrics_with_indicator(
 
 async def safe_a_measure(
     metric: Union[BaseMetric, BaseMultimodalMetric, BaseConversationalMetric],
-    tc: Union[LLMTestCase, MLLMTestCase, ConversationalTestCase],
+    tc: Union[ModelTestCase, MLLMTestCase, ConversationalTestCase],
     ignore_errors: bool,
     skip_on_missing_params: bool,
     pbar_eval: Optional[tqdm_asyncio] = None,

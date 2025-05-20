@@ -4,7 +4,7 @@ import os
 from openai import OpenAI
 
 from ..base import BaseMetric
-from ...test_case import ModelTestCase, ModelTestCaseParams, ToolExecution
+from ...test_case import ModelTestCase, ModelTestCaseParams, ToolCall
 from .template import ResponseEvalTemplate
 from .utils import validate_test_case_params, parse_score_and_explanation, format_list, build_evaluation_logs
 

@@ -5,16 +5,16 @@ from typing import Optional, Tuple, Union, Dict
 from pydantic import BaseModel
 import openai
 
-from eval.models import DeepEvalBaseLLM
-from eval.key_handler import KeyValues, KEY_FILE_HANDLER
-from eval.models.llms.openai_model import (
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.key_handler import KeyValues, KEY_FILE_HANDLER
+from agensight.eval.models.llms.openai_model import (
     structured_outputs_models,
     json_mode_models,
     model_pricing,
     log_retry_error,
 )
-from eval.models.llms.utils import trim_and_load_json
-from eval.models.utils import parse_model_name
+from agensight.eval.models.llms.utils import trim_and_load_json
+from agensight.eval.models.utils import parse_model_name
 
 retryable_exceptions = (
     openai.RateLimitError,
