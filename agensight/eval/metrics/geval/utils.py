@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict, Any, Optional, Tuple, Union
-from ..test_case import ModelTestCase, ModelTestCaseParams
+from ...test_case import ModelTestCase, ModelTestCaseParams
 
 def validate_test_case_params(test_case: ModelTestCase, params: List[ModelTestCaseParams], metric=None):
     """Verify that the test case contains all required parameters."""

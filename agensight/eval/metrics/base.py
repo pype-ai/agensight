@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 from abc import ABC, abstractmethod
-from .test_case import ModelTestCase, ModelTestCaseParams
+from ..test_case import ModelTestCase, ModelTestCaseParams
 
 class BaseMetric(ABC):
     def __init__(

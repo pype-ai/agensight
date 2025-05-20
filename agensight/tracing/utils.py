@@ -1,6 +1,6 @@
 import json
 from typing import List, Dict, Any
-from agensight.eval.metrics.test_case import ModelTestCase
+from agensight.eval.test_case import ModelTestCase
 
 def ns_to_seconds(nanoseconds: int) -> float:
     return nanoseconds / 1e9

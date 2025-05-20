@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Any, Union
 
-from agensight.eval.metrics.test_case import ModelTestCase, ModelTestCaseParams
+from agensight.eval.test_case import ModelTestCase, ModelTestCaseParams
 from agensight.eval.metrics.geval.g_eval import GEvalEvaluator
 from agensight.eval.storage.db_operations import insert_evaluation
 
