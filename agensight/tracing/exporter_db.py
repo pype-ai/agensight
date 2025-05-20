@@ -1,5 +1,6 @@
 import json
 import re
+import uuid
 from collections import defaultdict
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from agensight.tracing.db import get_db
@@ -44,7 +45,7 @@ def extract_token_counts_from_attrs(attrs, span_id, span_name):
                                 tokens["completion"] = v
                             elif 'total' in k.lower() and tokens["total"] is None:
                                 tokens["total"] = v
-            except:
+            except Exception:
                 pass
 
             for pattern in TOKEN_PATTERNS:
@@ -110,9 +111,9 @@ class DBSpanExporter(SpanExporter):
         for span in spans: 
             ctx = span.get_span_context()
             attrs = dict(span.attributes)
-            trace_id = attrs.get("trace_id") or format(ctx.trace_id, "032x")
-            span_id = format(ctx.span_id, "016x")
-            parent_id = format(span.parent.span_id, "016x") if span.parent else None
+            trace_id = attrs.get("trace_id") or str(uuid.uuid4())
+            span_id = str(uuid.uuid4())
+            parent_id = str(uuid.uuid4()) if span.parent else None 
             start = span.start_time / 1e9
             end = span.end_time / 1e9
             duration = end - start
@@ -120,15 +121,14 @@ class DBSpanExporter(SpanExporter):
             print(span)
 
             is_llm = any(k in str(attrs) or k in span.name.lower() for k in ["llm", "openai", "gen_ai", "completion"])
-
             if "gen_ai.normalized_input_output" not in attrs and is_llm:
                 attrs["gen_ai.normalized_input_output"] = _make_io_from_openai_attrs(attrs, span_id, span.name)
 
             try:
                 if parent_id is None:
                     conn.execute(
-                        "INSERT OR IGNORE INTO traces (id, name, started_at, ended_at, metadata) VALUES (?, ?, ?, ?, ?)",
-                        (trace_id, attrs.get("trace.name", span.name), start, end, json.dumps({}))
+                        "INSERT OR IGNORE INTO traces (id, name, started_at, ended_at, session_id, metadata) VALUES (?, ?, ?, ?, ?, ?)",
+                        (trace_id, attrs.get("trace.name", span.name), start, end, attrs.get("session.id"), json.dumps({}))
                     )
 
                 conn.execute(
@@ -138,7 +138,7 @@ class DBSpanExporter(SpanExporter):
                         str(span.kind), str(span.status.status_code), json.dumps(attrs)
                     )
                 )
-            except:
+            except Exception:
                 continue
 
             try:
@@ -157,7 +157,7 @@ class DBSpanExporter(SpanExporter):
                                      ))
                         if c["total_tokens"]:
                             total_tokens_by_trace[trace_id] += int(c["total_tokens"])
-            except:
+            except Exception:
                 pass
 
 
@@ -215,7 +215,6 @@ class DBSpanExporter(SpanExporter):
                         break
                     has_tool_calls = True
                     args = attrs.get(f"gen_ai.completion.0.tool_calls.{i}.arguments")
-
                     cursor = conn.execute("SELECT id FROM tools WHERE span_id = ? AND name = ?", (span_id, name))
                     existing = cursor.fetchone()
                     if not existing:
@@ -224,7 +223,6 @@ class DBSpanExporter(SpanExporter):
 
                 if has_tool_calls and parent_id and parent_id in span_map:
                     parent_span = span_map[parent_id]
-                    parent_attrs = dict(parent_span.attributes)
                     if "llm" in parent_span.name.lower() or "completion" in parent_span.name.lower():
                         for i in range(5):
                             name = attrs.get(f"gen_ai.completion.0.tool_calls.{i}.name")
@@ -236,7 +234,7 @@ class DBSpanExporter(SpanExporter):
                             if not existing:
                                 conn.execute("INSERT INTO tools (span_id, name, arguments) VALUES (?, ?, ?)",
                                              (parent_id, name, args))
-            except:
+            except Exception:
                 pass
 
         for span in spans:
@@ -249,11 +247,9 @@ class DBSpanExporter(SpanExporter):
                 parent_id = format(span.parent.span_id, "016x")
                 cursor = conn.execute("SELECT name, arguments FROM tools WHERE span_id = ?", (span_id,))
                 tools = cursor.fetchall()
-                for tool in tools:
-                    name, args = tool
+                for name, args in tools:
                     cursor = conn.execute("SELECT id FROM tools WHERE span_id = ? AND name = ?", (parent_id, name))
-                    existing = cursor.fetchone()
-                    if not existing:
+                    if not cursor.fetchone():
                         conn.execute("INSERT INTO tools (span_id, name, arguments) VALUES (?, ?, ?)",
                                      (parent_id, name, args))
 
@@ -261,7 +257,7 @@ class DBSpanExporter(SpanExporter):
             for trace_id, total in total_tokens_by_trace.items():
                 conn.execute("UPDATE traces SET total_tokens=? WHERE id=?", (total, trace_id))
             conn.commit()
-        except:
+        except Exception:
             pass
 
         return SpanExportResult.SUCCESS

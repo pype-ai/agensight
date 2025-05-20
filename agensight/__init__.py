@@ -3,6 +3,7 @@ from .tracing.session import enable_session_tracking, set_session_id
 from .integrations import instrument_openai
 from .integrations import instrument_anthropic 
 from .tracing.decorators import trace, span
+import json
 from .eval.setup import setup_eval
 
 def init(name="default", mode="dev", auto_instrument_llms=True, session=None):
@@ -16,10 +17,32 @@ def init(name="default", mode="dev", auto_instrument_llms=True, session=None):
     setup_tracing(service_name=name, exporter_type=exporter_type)
     setup_eval(exporter_type=exporter_type)
 
-    if session:
+    # Normalize session input (dict or str)
+    if isinstance(session, dict):
+        session_id = session.get("id")
+        session_name = session.get("name")
+        user_id = session.get("user_id")
+    else:
+        session_id = session
+        session_name = None 
+        user_id = None
+
+    if session_id:
         enable_session_tracking()
-        set_session_id(session)
-    
+        set_session_id(session_id)
+
+        try:
+            from agensight.tracing.db import get_db
+            import time
+            conn = get_db()
+            conn.execute(
+                "INSERT OR IGNORE INTO sessions (id, started_at, session_name, user_id, metadata) VALUES (?, ?, ?, ?, ?)",
+                (session_id, time.time(), session_name, user_id, json.dumps({}))
+            )
+            conn.commit()
+        except Exception:
+            pass
+
     if auto_instrument_llms:
         instrument_openai()
         instrument_anthropic()
