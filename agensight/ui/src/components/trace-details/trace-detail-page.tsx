@@ -24,6 +24,7 @@ import { Span, SpanDetails, ToolCall, TraceDetailPageProps } from "@/types/type"
 import { GanttChartVisualizer } from "@/components/GannChart";
 import { TraceDetailSkeleton } from "../skeletons/trace-details-skeleton";
 import { SpanDetailsContainer } from "./index";
+import { useSidebar } from "../ui/sidebar";
 
 // Custom hook to prevent scroll propagation
 function usePreventScrollPropagation() {
@@ -236,8 +237,10 @@ function TraceDetailPage({ id, name, latency, router, total_tokens }: TraceDetai
     return `${duration.toFixed(2)}s`;
   };
 
+  const {open} = useSidebar()
+
   return (
-    <div className="max-h-screen flex flex-col overflow-hidden animate-fadeIn">
+    <div className={`max-h-screen w-full flex flex-col overflow-hidden animate-fadeIn ${open ? '' : 'ml-18'}`}>
       {/* Main content takes full height */}
       <main className="flex flex-col overflow-hidden h-full">
         <div className="flex items-center justify-between text-sm px-6 py-2 border-b bg-muted/20 flex-shrink-0 sticky top-0 z-20">

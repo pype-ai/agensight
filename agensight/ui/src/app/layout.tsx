@@ -1,12 +1,17 @@
+"use client"
+
 import type { Metadata } from "next";
 // import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/sidebar";
+import { Header } from "@/components/Header";
 
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   title: 'Dashboard - Agensight',
   description: 'Agensight Dashboard - Monitor and analyze your application traces',
 };
@@ -16,13 +21,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { darkMode, toggleDarkMode } = useTheme();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <QueryProvider>
-              {children}
-            <Toaster />
+            <SidebarProvider>
+              <div className="flex w-full">
+                <AppSidebar />
+                <div className="flex flex-col w-full h-full">
+                  <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+
+                  {children}
+                </div>
+              </div>
+              <Toaster />
+            </SidebarProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

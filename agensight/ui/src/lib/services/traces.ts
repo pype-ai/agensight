@@ -117,3 +117,18 @@ export async function getAllTraces(): Promise<any[]> {
   
   return [];
 } 
+
+export async function getAllSessions(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/config/versions`);
+
+    if (!response.ok) {
+      throw new Error(`Error fetching config versions: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch config versions:', error);
+    throw error;
+  }
+}
