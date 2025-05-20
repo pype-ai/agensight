@@ -101,25 +101,18 @@ export async function getSpanDetailsById(spanId: string): Promise<SpanDetails> {
 
 // For future expansion - if you ever need to fetch all traces
 export async function getAllTraces(): Promise<any[]> {
-  const maxRetries = 3;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/traces`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error fetching traces: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`Error fetching traces: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Failed to fetch all traces (attempt ${attempt}/${maxRetries}):`, error);
-      if (attempt === maxRetries) throw error;
-      // Wait before retrying
-      await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt-1)));
+  try {
+    const response = await fetch(`${API_BASE_URL}/traces`);
+    
+    if (!response.ok) {
+      throw new Error(`Error fetching traces`);
     }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.log(`Failed to fetch all traces:`, error);
+    throw error;
   }
   
   return [];

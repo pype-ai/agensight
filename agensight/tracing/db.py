@@ -71,6 +71,7 @@ def init_schema():
         arguments TEXT,
         FOREIGN KEY(span_id) REFERENCES spans(id)
     );
+                         
     ''')
 
     # 🛠️ Add missing columns if they don't exist (for existing installations)

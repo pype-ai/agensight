@@ -4,6 +4,7 @@ from .integrations import instrument_openai
 from .integrations import instrument_anthropic 
 from .tracing.decorators import trace, span
 import json
+from .eval.setup import setup_eval
 
 def init(name="default", mode="dev", auto_instrument_llms=True, session=None):
     mode_to_exporter = {
@@ -14,6 +15,7 @@ def init(name="default", mode="dev", auto_instrument_llms=True, session=None):
     }
     exporter_type = mode_to_exporter.get(mode, "console")
     setup_tracing(service_name=name, exporter_type=exporter_type)
+    setup_eval(exporter_type=exporter_type)
 
     # Normalize session input (dict or str)
     if isinstance(session, dict):

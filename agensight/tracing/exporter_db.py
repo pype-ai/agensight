@@ -5,6 +5,7 @@ from collections import defaultdict
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from agensight.tracing.db import get_db
 from agensight.tracing.utils import parse_normalized_io_for_span
+from agensight.eval.metrics.geval.evaluate_gval import evaluate_with_gval
 
 TOKEN_PATTERNS = [
     r'"total_tokens":\s*(\d+)',
@@ -107,7 +108,7 @@ class DBSpanExporter(SpanExporter):
         total_tokens_by_trace = defaultdict(int)
         span_map = {format(span.get_span_context().span_id, "016x"): span for span in spans}
 
-        for span in spans:
+        for span in spans: 
             ctx = span.get_span_context()
             attrs = dict(span.attributes)
             trace_id = attrs.get("trace_id") or str(uuid.uuid4())
@@ -116,6 +117,8 @@ class DBSpanExporter(SpanExporter):
             start = span.start_time / 1e9
             end = span.end_time / 1e9
             duration = end - start
+
+            print(span)
 
             is_llm = any(k in str(attrs) or k in span.name.lower() for k in ["llm", "openai", "gen_ai", "completion"])
             if "gen_ai.normalized_input_output" not in attrs and is_llm:
@@ -140,6 +143,7 @@ class DBSpanExporter(SpanExporter):
 
             try:
                 nio = attrs.get("gen_ai.normalized_input_output")
+                print("nio", nio)
                 if nio:
                     prompts, completions = parse_normalized_io_for_span(span_id, nio)
                     for p in prompts:
@@ -154,6 +158,53 @@ class DBSpanExporter(SpanExporter):
                         if c["total_tokens"]:
                             total_tokens_by_trace[trace_id] += int(c["total_tokens"])
             except Exception:
+                pass
+
+
+            try:
+                # Use the metrics configuration from the span
+                metrics_configs_str = attrs.get("metrics.configs")
+                if metrics_configs_str and "gen_ai.normalized_input_output" in attrs:
+                    # Parse metrics configuration
+                    metrics_configs = json.loads(metrics_configs_str)
+                    
+                    # Extract input and output from normalized IO
+                    nio_data = json.loads(attrs.get("gen_ai.normalized_input_output"))
+                    input_text = nio_data.get("prompts", [{}])[0].get("content", "")
+                    output_text = nio_data.get("completions", [{}])[0].get("content", "")
+                    
+                    if input_text and output_text:
+                        
+                        # Evaluate based on each metric in the config
+                        for metric_name, config in metrics_configs.items():
+                            # Extract parameters from the config
+                            criteria = config.get("criteria")
+                            model = config.get("model", "gpt-4o-mini")
+                            threshold = config.get("threshold", 0.5)
+                            strict_mode = config.get("strict_mode", False)
+                            verbose_mode = config.get("verbose_mode", False)
+                            
+                            if criteria:
+                                # Call evaluate_with_gval with parameters from the config
+                                result = evaluate_with_gval(
+                                    input_text=input_text,
+                                    output_text=output_text,
+                                    name=metric_name,
+                                    criteria=criteria,
+                                    parent_id=span_id,
+                                    parent_type="span",
+                                    model=model,
+                                    threshold=threshold,
+                                    strict_mode=strict_mode,
+                                    verbose_mode=verbose_mode,
+                                    save_to_db=True,
+                                    source="automatic",
+                                    meta={"trace_id": trace_id, "span_name": span.name}
+                                )
+                                print(f"Evaluated {metric_name}: {result.get('score')} - {result.get('reason')}")
+
+            except Exception as e:
+                print(f"Error in direct evaluation using configs for span {span_id}: {e}")
                 pass
 
             try:

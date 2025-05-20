@@ -1,10 +1,17 @@
+import sys
+import os
+# Add the parent directory to Python path so it can find the agensight package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from IPython.display import Image, display
 from agensight import init
 from agensight import trace, span
 from openai import OpenAI
-import os
+
+from agensight.eval.g_eval import GEvalEvaluator
+
 
 # === Setup tracing and OpenAI ===
 init(name="langgraph-joke")  # or "console"
@@ -18,7 +25,23 @@ class State(TypedDict):
 
 # === Nodes ===
 
-@span(name="generate_joke")
+factual_accuracy = GEvalEvaluator(
+        name="Factual Accuracy",
+        criteria="Evaluate whether the actual output contains factually accurate information based on the expected output.",
+        threshold=0.7,
+        verbose_mode=True
+)
+
+helpfulness = GEvalEvaluator(
+        name="Helpfulness",
+        criteria="Evaluate whether the output is helpful and addresses the user's input question.",
+        threshold=0.6,
+        verbose_mode=True,
+)
+
+
+
+@span(name="generate_joke",metrics=[factual_accuracy,helpfulness])
 def generate_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -26,13 +49,13 @@ def generate_joke(state: State):
     )
     return {"joke": msg.choices[0].message.content}
 
-@span(name="check_punchline")
+@span(name="check_punchline",metrics=[factual_accuracy,helpfulness])
 def check_punchline(state: State):
     if "?" in state["joke"] or "!" in state["joke"]:
         return "Fail"
     return "Pass"
 
-@span(name="improve_joke")
+@span(name="improve_joke",metrics=[factual_accuracy,helpfulness])
 def improve_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -40,7 +63,7 @@ def improve_joke(state: State):
     )
     return {"improved_joke": msg.choices[0].message.content}
 
-@span(name="polish_joke")
+@span(name="polish_joke",metrics=[factual_accuracy])
 def polish_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",
