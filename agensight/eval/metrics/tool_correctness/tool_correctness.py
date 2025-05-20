@@ -1,4 +1,4 @@
-from typing import List, Union, Dict, Optional, Tuple
+from typing import List, Union, Dict
 
 from agensight.eval.metrics.indicator import metric_progress_indicator
 from agensight.eval.metrics.utils import (
@@ -13,10 +13,6 @@ from agensight.eval.test_case import (
     ToolCall,
 )
 from agensight.eval.metrics import BaseMetric
-from agensight.eval.models import DeepEvalBaseLLM
-from agensight.eval.metrics.tool_correctness.template import ToolCorrectnessTemplate
-from agensight.eval.metrics.utils import get_or_create_event_loop, prettify_list
-from agensight.eval.metrics.utils import trimAndLoadJson
 
 
 class ToolCorrectnessMetric(BaseMetric):
@@ -31,21 +27,18 @@ class ToolCorrectnessMetric(BaseMetric):
     def __init__(
         self,
         threshold: float = 0.5,
-        model: Optional[Union[str, DeepEvalBaseLLM]] = None,
+        evaluation_params: List[ToolCallParams] = [],
         include_reason: bool = True,
-        async_mode: bool = True,
         strict_mode: bool = False,
         verbose_mode: bool = False,
         should_exact_match: bool = False,
         should_consider_ordering: bool = False,
     ):
         self.threshold = 1 if strict_mode else threshold
-        self.model, self.using_native_model = initialize_model(model)
-        self.evaluation_model = self.model.get_model_name()
         self.include_reason = include_reason
-        self.async_mode = async_mode
         self.strict_mode = strict_mode
         self.verbose_mode = verbose_mode
+        self.evaluation_params: List[ToolCallParams] = evaluation_params
         self.should_exact_match = should_exact_match
         self.should_consider_ordering = should_consider_ordering
 
@@ -293,10 +286,3 @@ class ToolCorrectnessMetric(BaseMetric):
     def indent_multiline_string(self, s, indent_level=4):
         indent = " " * indent_level
         return "\n".join(f"{indent}{line}" for line in s.splitlines())
-
-    def _extract_tool_correctness(
-        self,
-        test_case: ModelTestCase,
-    ) -> Tuple:
-        # Implementation of _extract_tool_correctness method
-        pass

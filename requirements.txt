@@ -6,6 +6,7 @@ opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation
 opentelemetry-instrumentation-openai
+opentelemetry-exporter-otlp-proto-grpc
 fastapi
 uvicorn
 anthropic

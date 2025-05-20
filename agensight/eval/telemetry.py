@@ -219,8 +219,6 @@ def capture_metric_type(
         "async_mode": async_mode,
         "in_component": int(in_component),
     }
-    # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
     # capture new relic
     with tracer.start_as_current_span(event) as span:
         for property, value in properties.items():
@@ -282,8 +280,6 @@ def capture_conversation_simulator_run(num_conversations: int):
         "num_conversations": num_conversations,
     }
     set_last_feature(Feature.CONVERSATION_SIMULATOR)
-    # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
     # capture new relic
     with tracer.start_as_current_span(event) as span:
         for property, value in properties.items():
@@ -350,7 +346,6 @@ def capture_guardrails(guards: List[str]):
     }
     set_last_feature(Feature.GUARDRAIL)
     # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
     # capture new relic
     with tracer.start_as_current_span(event) as span:
         for property, value in properties.items():
@@ -376,7 +371,6 @@ def capture_benchmark_run(benchmark: str, num_tasks: int):
     }
     set_last_feature(Feature.BENCHMARK)
     # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
     # capture new relic
     with tracer.start_as_current_span(event) as span:
         for property, value in properties.items():
@@ -423,7 +417,6 @@ def capture_pull_dataset():
         ),
     }
     # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
     # capture new relic
     with tracer.start_as_current_span(event) as span:
         for property, value in properties.items():
@@ -449,7 +442,6 @@ def capture_send_trace():
         ),
     }
     # capture posthog
-    posthog.capture(distinct_id=distinct_id, event=event, properties=properties)
     # capture new relic
     with tracer.start_as_current_span(event) as span:
         for property, value in properties.items():
