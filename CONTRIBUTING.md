@@ -146,7 +146,6 @@ Closes #<issue-number>
 - [ ] I linked the issue correctly (`Closes #issue-id`)
 ```
 
-This template will be automatically applied to all new pull requests.
 
 ---
 
