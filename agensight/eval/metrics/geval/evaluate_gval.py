@@ -77,6 +77,8 @@ def evaluate_with_gval(
         strict_mode=strict_mode,
         verbose_mode=verbose_mode,
     )
+
+    print(evaluator , "calculate evaluator")
     
     # Create test case with all available information
     test_case_kwargs = {

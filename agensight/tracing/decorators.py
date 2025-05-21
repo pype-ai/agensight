@@ -18,6 +18,7 @@ current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
 
 
+
 def trace(name: Optional[str] = None, **default_attributes):
     def decorator(func: Callable):
         @functools.wraps(func)
@@ -182,7 +183,6 @@ def span(
             
             # start span
             with tracer.start_as_current_span(span_name, attributes=attributes) as span_obj:
-
                 fallback_input = args or kwargs
                 try:
                     result = func(*args, **kwargs)
@@ -191,20 +191,20 @@ def span(
                     trace_output.set(output or result)
                 except Exception as e:
                     span_obj.set_status(Status(StatusCode.ERROR, str(e)))
-                    io_data = normalize_input_output(input, output, fallback_input, None, span_obj.attributes)
-                    span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
+                    io_data = normalize_input_output(input, output, fallback_input, None, attributes)
+                    if span_obj.is_recording():
+                        span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
                     raise
 
                 usage = _extract_usage_from_result(result)
-                if usage:
+                if usage and span_obj.is_recording():
                     span_obj.set_attribute("llm.usage.total_tokens", usage.get("total_tokens"))
                     span_obj.set_attribute("gen_ai.usage.prompt_tokens", usage.get("prompt_tokens"))
                     span_obj.set_attribute("gen_ai.usage.completion_tokens", usage.get("completion_tokens"))
 
-                io_data = normalize_input_output(input, output, fallback_input, result, span_obj.attributes)
-                span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
-
-
+                io_data = normalize_input_output(input, output, fallback_input, result, attributes)
+                if span_obj.is_recording():
+                    span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
 
                 return result
         return wrapper

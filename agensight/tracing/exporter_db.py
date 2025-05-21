@@ -107,6 +107,9 @@ class DBSpanExporter(SpanExporter):
         total_tokens_by_trace = defaultdict(int)
         span_map = {format(span.get_span_context().span_id, "016x"): span for span in spans}
 
+
+        print(spans , "spans")
+
         for span in spans: 
             ctx = span.get_span_context()
             attrs = dict(span.attributes)
@@ -162,8 +165,12 @@ class DBSpanExporter(SpanExporter):
 
 
             try:
+
+                print(attrs , "attrs")
                 # Use the metrics configuration from the span
                 metrics_configs_str = attrs.get("metrics.configs")
+
+                print(metrics_configs_str , "metrics_configs_str")
                 if metrics_configs_str and "gen_ai.normalized_input_output" in attrs:
                     # Parse metrics configuration
                     metrics_configs = json.loads(metrics_configs_str)
