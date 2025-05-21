@@ -81,6 +81,22 @@ class ProdSpanExporter(SpanExporter):
                     "trace_id": trace_id
                 }
 
+                session_id = attrs.get("session.id")
+                if session_id:
+                    if not hasattr(self, "_session_inserted"):
+                        self._session_inserted = set()
+                    if session_id not in self._session_inserted:
+                        post_to_lambda("session", {
+                            "id": session_id,
+                            "project_id": self.project_id,
+                            "started_at": start,
+                            "session_name": attrs.get("session.name"),
+                            "user_id": attrs.get("session.user_id"),
+                            "metadata": json.dumps({}),
+                            "mode": get_mode()
+                        })
+                        self._session_inserted.add(session_id)
+
                 if trace_id not in trace_inserted and span.parent is None:
                     try:
                         trace_success = post_to_lambda("trace", {
