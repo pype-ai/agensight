@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 
 // Define navigation items as a JSON structure
@@ -82,8 +82,21 @@ const navigationItems = [
 ];
 
 export function AppSidebar() {
-  const { open } = useSidebar();
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const { open, toggleSidebar } = useSidebar();
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(navigationItems.map(item => [item.label, false]))
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSidebar]);
 
   const toggleMenu = (menuLabel: string) => {
     setOpenMenus((prev) => ({

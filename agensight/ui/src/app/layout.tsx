@@ -6,7 +6,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar";
 import { Header } from "@/components/Header";
 
@@ -22,7 +22,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const { darkMode, toggleDarkMode } = useTheme();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
@@ -32,8 +31,6 @@ export default function RootLayout({
               <div className="flex w-full">
                 <AppSidebar />
                 <div className="flex flex-col w-full h-full">
-                  <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-
                   {children}
                 </div>
               </div>
