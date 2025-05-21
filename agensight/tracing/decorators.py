@@ -5,19 +5,17 @@ import uuid
 import contextvars
 from typing import Callable, Optional, Dict, Any, List, Union
 from agensight.tracing.session import enable_session_tracking, set_session_id
-
-from opentelemetry import trace as ot_trace
-from opentelemetry.trace.status import Status, StatusCode
-
 from agensight.tracing import get_tracer
 from agensight.tracing.session import is_session_enabled, get_session_id
 from agensight.tracing.context import trace_input, trace_output
 from agensight.tracing.db import get_db
+from agensight.tracing.config import get_mode
 from agensight.eval.metrics.base import BaseMetric
-# Global contextvars
+from opentelemetry import trace as ot_trace
+from opentelemetry.trace.status import Status, StatusCode
+
 current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
-
 
 def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None, **default_attributes):
     def decorator(func: Callable):
@@ -38,17 +36,17 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
             if session_id:
                 enable_session_tracking()
                 set_session_id(session_id)
-                try:
-                    from agensight.tracing.db import get_db
-                    import time, json
-                    conn = get_db()
-                    conn.execute(
-                        "INSERT OR IGNORE INTO sessions (id, started_at, session_name, user_id, metadata) VALUES (?, ?, ?, ?, ?)",
-                        (session_id, time.time(), session_name, user_id, json.dumps({}))
-                    )
-                    conn.commit()
-                except Exception:
-                    pass
+
+                if get_mode() != "prod":
+                    try:
+                        conn = get_db()
+                        conn.execute(
+                            "INSERT OR IGNORE INTO sessions (id, started_at, session_name, user_id, metadata) VALUES (?, ?, ?, ?, ?)",
+                            (session_id, time.time(), session_name, user_id, json.dumps({}))
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
 
             current_trace_id.set(trace_id)
             current_trace_name.set(trace_name)
@@ -57,17 +55,18 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
             result = func(*args, **kwargs)
             ended_at = time.time()
 
-            try:
-                conn = get_db()
-                metadata = json.dumps(default_attributes or {})
-                session_id = get_session_id() if is_session_enabled() else None
-                conn.execute(
-                    "INSERT OR IGNORE INTO traces (id, name, started_at, ended_at, session_id, metadata) VALUES (?, ?, ?, ?, ?, ?)",
-                    (trace_id, trace_name, started_at, ended_at, session_id, metadata)
-                )
-                conn.commit()
-            except Exception:
-                pass
+            if get_mode() != "prod":
+                try:
+                    conn = get_db()
+                    metadata = json.dumps(default_attributes or {})
+                    session_id = get_session_id() if is_session_enabled() else None
+                    conn.execute(
+                        "INSERT OR IGNORE INTO traces (id, name, started_at, ended_at, session_id, metadata) VALUES (?, ?, ?, ?, ?, ?)",
+                        (trace_id, trace_name, started_at, ended_at, session_id, metadata)
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
 
             trace_input.set(None)
             trace_output.set(None)
@@ -75,13 +74,11 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
         return wrapper
     return decorator
 
-
 def _extract_usage_from_result(result: Any) -> Optional[Dict[str, int]]:
     if result is None:
         return None
     if isinstance(result, dict) and isinstance(result.get("usage"), dict):
         return result["usage"]
-
     usage = getattr(result, "usage", None)
     if usage:
         if hasattr(usage, "to_dict"):
@@ -94,7 +91,6 @@ def _extract_usage_from_result(result: Any) -> Optional[Dict[str, int]]:
             "completion_tokens": getattr(usage, "completion_tokens", None),
         }
     return None
-
 
 def normalize_input_output(
     explicit_input: Optional[Any],
@@ -142,11 +138,6 @@ def normalize_input_output(
 
     return result
 
-
-
-
-
-
 def span(
     name: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
@@ -154,7 +145,6 @@ def span(
     output: Optional[Any] = None,
     metrics: Optional[List[BaseMetric]] = None,
 ):
-        
     tracer = ot_trace.get_tracer("default")
     def decorator(func: Callable):
         @functools.wraps(func)
@@ -171,7 +161,6 @@ def span(
             if is_session_enabled():
                 attributes["session.id"] = get_session_id()
             
-            # add metrics configs to attributes
             if metrics:
                 metric_configs = {}
                 for i, metric in enumerate(metrics):
@@ -180,8 +169,6 @@ def span(
                         "type": metric.__class__.__name__,
                         "name": metric_name,
                     }
-                    
-                    # Add specific GEvalEvaluator attributes
                     if hasattr(metric, "criteria"):
                         config["criteria"] = metric.criteria
                     if hasattr(metric, "model"):
@@ -192,22 +179,15 @@ def span(
                         config["strict_mode"] = metric.strict_mode
                     if hasattr(metric, "verbose_mode"):
                         config["verbose_mode"] = metric.verbose_mode
-                    
-                    # Skip complex objects that might not serialize well
-                    # But add their presence as metadata
                     if hasattr(metric, "evaluation_params"):
                         config["has_evaluation_params"] = True
                     if hasattr(metric, "evaluation_steps"):
                         config["has_evaluation_steps"] = True
-                        
                     metric_configs[metric_name] = config
-                    
+                
                 attributes["metrics.configs"] = json.dumps(metric_configs)
 
-            
-            # start span
             with tracer.start_as_current_span(span_name, attributes=attributes) as span_obj:
-
                 fallback_input = args or kwargs
                 try:
                     result = func(*args, **kwargs)
@@ -228,8 +208,6 @@ def span(
 
                 io_data = normalize_input_output(input, output, fallback_input, result, span_obj.attributes)
                 span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
-
-
 
                 return result
         return wrapper
