@@ -14,7 +14,9 @@ def init_schema():
     cursor.executescript('''
     CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
+        name TEXT,
         started_at REAL,
+        ended_at REAL,
         metadata TEXT
     );
 
@@ -71,5 +73,12 @@ def init_schema():
     );
                          
     ''')
+
+    # 🛠️ Add missing columns if they don't exist (for existing installations)
+    existing_cols = [row["name"] for row in cursor.execute("PRAGMA table_info(sessions);")]
+    if "session_name" not in existing_cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN session_name TEXT")
+    if "user_id" not in existing_cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN user_id TEXT")
     conn.commit()
     conn.close()
