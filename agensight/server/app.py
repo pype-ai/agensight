@@ -7,6 +7,8 @@ import logging
 from typing import Dict
 from flask import Flask
 from starlette.middleware.wsgi import WSGIMiddleware
+import socket
+from contextlib import closing
 
 # Import routers from route modules
 from .routes.config import config_router, config_bp
@@ -151,9 +153,28 @@ async def debug_data():
             "message": str(e)
         }
 
+def find_free_port(start_port=5000, max_port=5100):
+    """
+    Find a free port between start_port and max_port
+    """
+    for port in range(start_port, max_port):
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+            try:
+                sock.bind(('', port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(f"No free ports found between {start_port} and {max_port}")
+
 def start_server():
-    """Start the server"""
-    uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=5001,log_level="info")
+    """Start the server on an available port"""
+    try:
+        port = find_free_port(start_port=5000)
+        print(f"Starting server on port {port}")
+        uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=port, log_level="info")
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        raise
 
 if __name__ == "__main__":
     start_server()

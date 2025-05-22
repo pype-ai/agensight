@@ -1,4 +1,3 @@
-openai>=1.0.0 
 Flask
 pytest
 flask_cors
@@ -18,9 +17,9 @@ torch
 transformers
 openai
 google-generativeai
-pydantic
 retry
 rich
 sentry_sdk
+nest_asyncio
 Dbias  # Optional, for bias detection
 allennlp  # Optional, for decomposable attention model
