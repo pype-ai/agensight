@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getSingleSessionTraces, getSpans } from '@/lib/services/traces';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/collapsible';
 import Link from 'next/link';
 
-export default function Session() {
+function SessionContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('sessionId');
 
@@ -407,5 +407,14 @@ function EmptyState() {
         </Button>
       </div>
     </div>
+  );
+}
+
+
+export default function Session() {
+  return (
+    <Suspense fallback={<div>Loading session...</div>}>
+      <SessionContent />
+    </Suspense>
   );
 }

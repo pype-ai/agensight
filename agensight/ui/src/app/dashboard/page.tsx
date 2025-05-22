@@ -395,7 +395,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <main className={`${open ? '' : 'ml-18'}`}>
+      <main className={`${open ? '' : 'ml-0'}`}>
         <div className={`container mx-auto py-6 ${open ? 'px-6' : ''}`}>
           <div className="mb-2 flex flex-col sm:flex-row sm:items-center gap-4 justify-between  pb-4">
             <div className="flex-none">
