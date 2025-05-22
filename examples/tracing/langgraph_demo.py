@@ -45,7 +45,7 @@ factual_accuracy = GEvalEvaluator(
 helpfulness = GEvalEvaluator(
         name="Helpfulness",
         criteria="Evaluate whether the output is helpful and addresses the user's input question.",
-        threshold=0.6,
+        threshold=1,
         verbose_mode=True,
         model="gpt-4o-mini"
 )

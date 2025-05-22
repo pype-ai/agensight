@@ -2,7 +2,10 @@ from agensight.eval.test_case import ModelTestCase, ConversationalTestCase
 from agensight.eval.metrics import ConversationRelevancyMetric
 
 convo_test_case = ConversationalTestCase(
-    turns=[ModelTestCase(input="...", actual_output="...")]
+    turns=[
+        ModelTestCase(input="What is the weather like today?", actual_output="The weather is sunny with a high of 25 degrees."),
+        ModelTestCase(input="Great, should I wear a jacket?", actual_output="No, a light sweater should be fine.")
+    ]
 )
 metric = ConversationRelevancyMetric(threshold=0.5)
 

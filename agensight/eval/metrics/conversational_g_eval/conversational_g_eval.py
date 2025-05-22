@@ -6,8 +6,8 @@ import math
 from agensight.eval.metrics import BaseMetric
 from agensight.eval.metrics.geval.utils import construct_g_eval_params_string
 from agensight.eval.test_case import (
-    LLMTestCase,
-    LLMTestCaseParams,
+    ModelTestCase,
+    ModelTestCaseParams,
     ConversationalTestCase,
 )
 from agensight.eval.metrics.conversational_g_eval.template import (
@@ -30,7 +30,7 @@ class ConversationalGEval(BaseMetric):
     def __init__(
         self,
         name: str,
-        evaluation_params: List[LLMTestCaseParams],
+        evaluation_params: List[ModelTestCaseParams],
         criteria: Optional[str] = None,
         evaluation_steps: Optional[List[str]] = None,
         model: Optional[Union[str, DeepEvalBaseLLM]] = None,
@@ -202,7 +202,7 @@ class ConversationalGEval(BaseMetric):
                 return data["steps"]
 
     async def _a_evaluate(
-        self, test_case: LLMTestCase
+        self, test_case: ModelTestCase
     ) -> Tuple[Union[int, float], str]:
         turns = format_turns(test_case.turns, self.evaluation_params)
         g_eval_params_str = construct_g_eval_params_string(

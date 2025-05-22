@@ -1,3 +1,5 @@
+"""LLM evaluated metric based on the GEval framework: https://arxiv.org/pdf/2303.16634.pdf"""
+
 from typing import Optional, List, Tuple, Union
 from agensight.eval.metrics import BaseMetric
 from agensight.eval.test_case import (
@@ -34,21 +36,23 @@ class GEvalEvaluator(BaseMetric):
     def __init__(
         self,
         name: str,
-        evaluation_params: Optional[List[ModelTestCaseParams]] = None,
+        evaluation_params:Optional[List[ModelTestCaseParams]] = None,
         criteria: Optional[str] = None,
         evaluation_steps: Optional[List[str]] = None,
         rubric: Optional[List[Rubric]] = None,
-        model: Optional[str] = "gpt-4o-mini",
+        model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         threshold: float = 0.5,
         top_logprobs: int = 20,
-        async_mode: bool = True,
+        async_mode: bool = False,
         strict_mode: bool = False,
         verbose_mode: bool = False,
         _include_g_eval_suffix: bool = True,
     ):
         validate_criteria_and_evaluation_steps(criteria, evaluation_steps)
         self.name = name
-        self.evaluation_params = evaluation_params or [ModelTestCaseParams.INPUT, ModelTestCaseParams.ACTUAL_OUTPUT]
+        self.evaluation_params = evaluation_params
+        if self.evaluation_params is None:
+            self.evaluation_params = [ModelTestCaseParams.INPUT, ModelTestCaseParams.ACTUAL_OUTPUT]
         self.criteria = criteria
         self.rubric = validate_and_sort_rubrics(rubric)
         self.model, self.using_native_model = initialize_model(model)
@@ -234,7 +238,7 @@ class GEvalEvaluator(BaseMetric):
                 raise AttributeError("log_probs unsupported.")
 
             # Don't have to check for using native model
-            # since generate raw response only exist for deepeval's native model
+            # since generate raw response only exist for agensight.eval's native model
             res, cost = await self.model.a_generate_raw_response(
                 prompt, top_logprobs=self.top_logprobs
             )

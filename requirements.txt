@@ -20,6 +20,7 @@ openai
 google-generativeai
 pydantic
 retry
+rich
 sentry_sdk
 Dbias  # Optional, for bias detection
 allennlp  # Optional, for decomposable attention model

@@ -1,5 +1,5 @@
 from agensight.eval.metrics import GEvalEvaluator
-from agensight.eval.test_case import ModelTestCaseParams
+from agensight.eval.test_case import ModelTestCase
 
 correctness_metric = GEvalEvaluator(
     name="Code Correctness",
@@ -11,3 +11,17 @@ correctness_metric = GEvalEvaluator(
         "Verify that the code is well-documented with clear comments"
     ],
 )
+
+print(correctness_metric.measure())
+
+# Define a test case
+test_case = ModelTestCase(
+    input="def add(a, b): return a + b",
+    actual_output="Correctly implements addition function",
+)
+
+# Evaluate the test case
+result = correctness_metric.evaluate(test_case=test_case)
+
+# Print the evaluation result
+print(result)
