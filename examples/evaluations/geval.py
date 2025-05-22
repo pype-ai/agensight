@@ -1,3 +1,8 @@
+import sys
+import os
+# Add the parent directory to Python path so it can find the agensight package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 from agensight.eval.metrics import GEvalEvaluator
 from agensight.eval.test_case import ModelTestCase
 
@@ -12,7 +17,6 @@ correctness_metric = GEvalEvaluator(
     ],
 )
 
-print(correctness_metric.measure())
 
 # Define a test case
 test_case = ModelTestCase(
@@ -21,7 +25,7 @@ test_case = ModelTestCase(
 )
 
 # Evaluate the test case
-result = correctness_metric.evaluate(test_case=test_case)
+result = correctness_metric.measure(test_case=test_case)
 
 # Print the evaluation result
 print(result)
