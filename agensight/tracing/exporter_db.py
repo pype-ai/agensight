@@ -103,23 +103,10 @@ def _make_io_from_openai_attrs(attrs, span_id, span_name):
     return json.dumps({"prompts": prompts, "completions": completions})
 
 class DBSpanExporter(SpanExporter):
-    print( "spans")
     def export(self, spans):
-        if not spans:
-            print("No spans received, returning early")
-            return SpanExportResult.SUCCESS
-            
         conn = get_db()
         total_tokens_by_trace = defaultdict(int)
         span_map = {format(span.get_span_context().span_id, "016x"): span for span in spans}
-
-        print("=== Span Details ===")
-        for span in spans:
-            print(f"\nSpan Name: {span.name}")
-            print(f"Span ID: {format(span.get_span_context().span_id, '016x')}")
-            print(f"Trace ID: {format(span.get_span_context().trace_id, '032x')}")
-            print(f"Attributes: {dict(span.attributes)}")
-            print("---")
 
         for span in spans: 
             ctx = span.get_span_context()
@@ -175,12 +162,8 @@ class DBSpanExporter(SpanExporter):
 
 
             try:
-
-                print(attrs , "attrs")
                 # Use the metrics configuration from the span
                 metrics_configs_str = attrs.get("metrics.configs")
-
-                print(metrics_configs_str , "metrics_configs_str")
                 if metrics_configs_str and "gen_ai.normalized_input_output" in attrs:
                     # Parse metrics configuration
                     metrics_configs = json.loads(metrics_configs_str)
