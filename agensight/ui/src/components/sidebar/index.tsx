@@ -1,3 +1,6 @@
+"use client"
+
+
 import {
   Home,
   LayoutDashboard,
@@ -41,23 +44,23 @@ const navigationItems = [
     href: '/dashboard',
     children: null,
   },
-  // {
-  //   label: 'Traces',
-  //   icon: Activity,
-  //   href: null,
-  //   children: [
-  //     {
-  //       label: 'Sessions',
-  //       icon: List,
-  //       href: '/sessions',
-  //     },
-  // {
-  //   label: 'Traces',
-  //   icon: FileText,
-  //   href: '/traces',
-  // },
-  //   ],
-  // },
+  {
+    label: 'Traces',
+    icon: Activity,
+    href: null,
+    children: [
+      {
+        label: 'Sessions',
+        icon: List,
+        href: '/sessions',
+      },
+      // {
+      //   label: 'Traces',
+      //   icon: FileText,
+      //   href: '/traces',
+      // },
+    ],
+  },
   // if needed add more menu items
   // {
   //   label: 'Settings',
@@ -169,10 +172,10 @@ export function AppSidebar() {
           asChild
           className="gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
         >
-      <Link href={item.href}>
-    <IconComponent className={cn('w-5 h-5', !open && 'mx-auto')} />
-                {open && <span className="font-medium">{item.label}</span>}
-              </Link>
+          <Link href={item.href} className="flex items-center">
+            <IconComponent className={cn('w-5 h-5', !open && 'mx-auto')} />
+            {open && <span className="font-medium">{item.label}</span>}
+          </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -206,12 +209,12 @@ export function AppSidebar() {
             </div>
           </div>
           {open && (
-            <a className="flex items-center space-x-3 font-bold group" href="/">
+            <Link className="flex items-center space-x-3 font-bold group" href="/">
               <span className="hidden sm:inline-block text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/70 text-xl tracking-tight transition-all duration-300 group-hover:tracking-normal">
                 Agensight{' '}
                 <span className="font-normal text-foreground/90">Studio</span>
               </span>
-            </a>
+            </Link>
           )}
         </div>
       </SidebarHeader>

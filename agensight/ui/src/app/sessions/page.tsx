@@ -31,7 +31,7 @@ export default function Sessions() {
       session_name: session_name || '',
       user_id: user_id || '',
     });
-    router.push(`/sessions/session?${params.toString()}`);
+    router.push(`/session?${params.toString()}`);
   };
 
   console.log({ sessionsData });
