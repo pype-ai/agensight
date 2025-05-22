@@ -98,8 +98,6 @@ def evaluate_with_gval(
     # Measure and return results
     try:
         score = evaluator.measure(test_case)
-
-        print(score , "score")
         
         # Save to database if requested
         if save_to_db and parent_id:
