@@ -20,7 +20,7 @@ def evaluate_with_gval(
     strict_mode: bool = False,
     verbose_mode: bool = False,
     evaluation_steps: Optional[List[str]] = None,
-    save_to_db: bool = False,
+    save_to_db: bool = True,
     project_id: Optional[str] = None,
     source: str = "manual",
     eval_type: str = "metric",

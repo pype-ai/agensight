@@ -3,7 +3,8 @@ import json
 import time
 import uuid
 import contextvars
-from typing import Callable, Optional, Dict, Any, List
+from typing import Callable, Optional, Dict, Any, List, Union
+from agensight.tracing.session import enable_session_tracking, set_session_id
 
 from opentelemetry import trace as ot_trace
 from opentelemetry.trace.status import Status, StatusCode
@@ -18,13 +19,36 @@ current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
 
 
-
-def trace(name: Optional[str] = None, **default_attributes):
+def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None, **default_attributes):
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             trace_name = name or func.__name__
-            trace_id = uuid.uuid4().hex
+            trace_id = str(uuid.uuid4())
+
+            if isinstance(session, dict):
+                session_id = session.get("id")
+                session_name = session.get("name")
+                user_id = session.get("user_id")
+            else:
+                session_id = session
+                session_name = None
+                user_id = None
+
+            if session_id:
+                enable_session_tracking()
+                set_session_id(session_id)
+                try:
+                    from agensight.tracing.db import get_db
+                    import  json
+                    conn = get_db()
+                    conn.execute(
+                        "INSERT OR IGNORE INTO sessions (id, started_at, session_name, user_id, metadata) VALUES (?, ?, ?, ?, ?)",
+                        (session_id, time.time(), session_name, user_id, json.dumps({}))
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
 
             current_trace_id.set(trace_id)
             current_trace_name.set(trace_name)
@@ -119,10 +143,6 @@ def normalize_input_output(
     return result
 
 
-
-
-
-
 def span(
     name: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
@@ -161,7 +181,7 @@ def span(
                     if hasattr(metric, "criteria"):
                         config["criteria"] = metric.criteria
                     if hasattr(metric, "model"):
-                        config["model"] = metric.model.get_model_name() if hasattr(metric.model, "get_model_name") else str(metric.model)
+                        config["model"] = metric.evaluation_model if hasattr(metric, "evaluation_model") else str(metric.model)
                     if hasattr(metric, "threshold"):
                         config["threshold"] = metric.threshold
                     if hasattr(metric, "strict_mode"):
@@ -183,6 +203,7 @@ def span(
             
             # start span
             with tracer.start_as_current_span(span_name, attributes=attributes) as span_obj:
+
                 fallback_input = args or kwargs
                 try:
                     result = func(*args, **kwargs)
@@ -192,19 +213,19 @@ def span(
                 except Exception as e:
                     span_obj.set_status(Status(StatusCode.ERROR, str(e)))
                     io_data = normalize_input_output(input, output, fallback_input, None, attributes)
-                    if span_obj.is_recording():
-                        span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
+                    span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
+                    span_obj.set_attribute("metrics.configs",attributes["metrics.configs"] )
                     raise
 
                 usage = _extract_usage_from_result(result)
-                if usage and span_obj.is_recording():
+                if usage:
                     span_obj.set_attribute("llm.usage.total_tokens", usage.get("total_tokens"))
                     span_obj.set_attribute("gen_ai.usage.prompt_tokens", usage.get("prompt_tokens"))
                     span_obj.set_attribute("gen_ai.usage.completion_tokens", usage.get("completion_tokens"))
 
                 io_data = normalize_input_output(input, output, fallback_input, result, attributes)
-                if span_obj.is_recording():
-                    span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
+                span_obj.set_attribute("gen_ai.normalized_input_output", json.dumps(io_data))
+                span_obj.set_attribute("metrics.configs",attributes["metrics.configs"] )
 
                 return result
         return wrapper

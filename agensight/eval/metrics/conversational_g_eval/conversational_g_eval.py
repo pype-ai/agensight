@@ -1,61 +1,69 @@
-from typing import Optional, List, Tuple, Union
+"""A slightly modified tailored version of the LLM evaluated metric based on the GEval framework: https://arxiv.org/pdf/2303.16634.pdf"""
+
+from openai.types.chat.chat_completion import ChatCompletion
+from typing import Optional, List, Tuple, Union, Dict
+import math
 from agensight.eval.metrics import BaseMetric
+from agensight.eval.metrics.geval.utils import construct_g_eval_params_string
 from agensight.eval.test_case import (
-    ModelTestCase,
-    ModelTestCaseParams,
+    LLMTestCase,
+    LLMTestCaseParams,
     ConversationalTestCase,
 )
-from agensight.eval.metrics.geval.template import GEvalTemplate
+from agensight.eval.metrics.conversational_g_eval.template import (
+    ConversationalGEvalTemplate,
+)
 from agensight.eval.utils import get_or_create_event_loop, prettify_list
 from agensight.eval.metrics.utils import (
+    check_conversational_test_case_params,
     construct_verbose_logs,
+    format_turns,
     trimAndLoadJson,
-    check_llm_test_case_params,
     initialize_model,
 )
 from agensight.eval.models import DeepEvalBaseLLM
 from agensight.eval.metrics.indicator import metric_progress_indicator
-from agensight.eval.metrics.geval.schema import *
-from agensight.eval.metrics.geval.utils import (
-    Rubric,
-    construct_g_eval_params_string,
-    construct_test_case_string,
-    format_rubrics,
-    no_log_prob_support,
-    calculate_weighted_summed_score,
-    validate_and_sort_rubrics,
-    validate_criteria_and_evaluation_steps,
-    number_evaluation_steps,
-    get_score_range,
-)
+from agensight.eval.metrics.conversational_g_eval.schema import *
 
 
-class GEvalEvaluator(BaseMetric):
+class ConversationalGEval(BaseMetric):
     def __init__(
         self,
         name: str,
-        evaluation_params: Optional[List[ModelTestCaseParams]] = None,
+        evaluation_params: List[LLMTestCaseParams],
         criteria: Optional[str] = None,
         evaluation_steps: Optional[List[str]] = None,
-        rubric: Optional[List[Rubric]] = None,
-        model: Optional[str] = "gpt-4o-mini",
+        model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         threshold: float = 0.5,
-        top_logprobs: int = 20,
         async_mode: bool = True,
         strict_mode: bool = False,
         verbose_mode: bool = False,
         _include_g_eval_suffix: bool = True,
     ):
-        validate_criteria_and_evaluation_steps(criteria, evaluation_steps)
         self.name = name
-        self.evaluation_params = evaluation_params or [ModelTestCaseParams.INPUT, ModelTestCaseParams.ACTUAL_OUTPUT]
+        self.evaluation_params = evaluation_params
+
+        # Check if both criteria and evaluation_steps are not None at the same time
+        if criteria is None and evaluation_steps is None:
+            raise ValueError(
+                "Either 'criteria' or 'evaluation_steps' must be provided."
+            )
+
+        # Check if criteria is provided, it cannot be an empty string
+        if criteria is not None and not criteria.strip():
+            raise ValueError("Criteria provided cannot be an empty string.")
+
+        # Check if evaluation_steps is provided, it cannot be an empty list
+        if evaluation_steps is not None and len(evaluation_steps) == 0:
+            raise ValueError(
+                "'evaluation_steps' must not be an empty list. Either omit evaluation steps or include a non-empty list of steps."
+            )
+
         self.criteria = criteria
-        self.rubric = validate_and_sort_rubrics(rubric)
         self.model, self.using_native_model = initialize_model(model)
         self.evaluation_model = self.model.get_model_name()
         self.evaluation_steps = evaluation_steps
         self.threshold = 1 if strict_mode else threshold
-        self.top_logprobs = top_logprobs
         self.strict_mode = strict_mode
         self.async_mode = async_mode
         self.verbose_mode = verbose_mode
@@ -63,14 +71,13 @@ class GEvalEvaluator(BaseMetric):
 
     def measure(
         self,
-        test_case: Union[ModelTestCase, ConversationalTestCase],
+        test_case: ConversationalTestCase,
         _show_indicator: bool = True,
         _in_component: bool = False,
-        _additional_context: Optional[str] = None,
     ) -> float:
-        if isinstance(test_case, ConversationalTestCase):
-            test_case = test_case.turns[-1]
-        check_llm_test_case_params(test_case, self.evaluation_params, self)
+        check_conversational_test_case_params(
+            test_case, self.evaluation_params, self
+        )
 
         self.evaluation_cost = 0 if self.using_native_model else None
         with metric_progress_indicator(
@@ -83,16 +90,13 @@ class GEvalEvaluator(BaseMetric):
                         test_case,
                         _show_indicator=False,
                         _in_component=_in_component,
-                        _additional_context=_additional_context,
                     )
                 )
             else:
                 self.evaluation_steps: List[str] = (
                     self._generate_evaluation_steps()
                 )
-                g_score, reason = self._evaluate(
-                    test_case, _additional_context=_additional_context
-                )
+                g_score, reason = self.evaluate(test_case)
                 self.reason = reason
                 self.score = float(g_score) / 10
                 self.score = (
@@ -104,9 +108,7 @@ class GEvalEvaluator(BaseMetric):
                 self.verbose_logs = construct_verbose_logs(
                     self,
                     steps=[
-                        f"Criteria:\n{self.criteria}",
                         f"Evaluation Steps:\n{prettify_list(self.evaluation_steps)}",
-                        f"Rubric:\n{format_rubrics(self.rubric)}",
                         f"Score: {self.score}\nReason: {self.reason}",
                     ],
                 )
@@ -115,14 +117,13 @@ class GEvalEvaluator(BaseMetric):
 
     async def a_measure(
         self,
-        test_case: Union[ModelTestCase, ConversationalTestCase],
+        test_case: ConversationalTestCase,
         _show_indicator: bool = True,
         _in_component: bool = False,
-        _additional_context: Optional[str] = None,
     ) -> float:
-        if isinstance(test_case, ConversationalTestCase):
-            test_case = test_case.turns[-1]
-        check_llm_test_case_params(test_case, self.evaluation_params, self)
+        check_conversational_test_case_params(
+            test_case, self.evaluation_params, self
+        )
 
         self.evaluation_cost = 0 if self.using_native_model else None
         with metric_progress_indicator(
@@ -134,12 +135,13 @@ class GEvalEvaluator(BaseMetric):
             self.evaluation_steps: List[str] = (
                 await self._a_generate_evaluation_steps()
             )
-            g_score, reason = await self._a_evaluate(
-                test_case, _additional_context=_additional_context
-            )
+            g_score, reason = await self._a_evaluate(test_case)
             self.reason = reason
+            self.score = float(g_score) / 10
             self.score = (
-                float(g_score) / 10 if not self.strict_mode else int(g_score)
+                0
+                if self.strict_mode and self.score < self.threshold
+                else self.score
             )
             self.success = self.score >= self.threshold
             self.verbose_logs = construct_verbose_logs(
@@ -147,10 +149,10 @@ class GEvalEvaluator(BaseMetric):
                 steps=[
                     f"Criteria:\n{self.criteria}",
                     f"Evaluation Steps:\n{prettify_list(self.evaluation_steps)}",
-                    f"Rubric:\n{format_rubrics(self.rubric)}",
                     f"Score: {self.score}\nReason: {self.reason}",
                 ],
             )
+
             return self.score
 
     async def _a_generate_evaluation_steps(self) -> List[str]:
@@ -160,14 +162,13 @@ class GEvalEvaluator(BaseMetric):
         g_eval_params_str = construct_g_eval_params_string(
             self.evaluation_params
         )
-        prompt = GEvalTemplate.generate_evaluation_steps(
+        prompt = ConversationalGEvalTemplate.generate_evaluation_steps(
             criteria=self.criteria, parameters=g_eval_params_str
         )
         if self.using_native_model:
-            res, cost = await self.model.a_generate(prompt)
+            res, cost = await self.model.a_generate(prompt, schema=Steps)
             self.evaluation_cost += cost
-            data = trimAndLoadJson(res, self)
-            return data["steps"]
+            return res.steps
         else:
             try:
                 res: Steps = await self.model.a_generate(prompt, schema=Steps)
@@ -184,14 +185,13 @@ class GEvalEvaluator(BaseMetric):
         g_eval_params_str = construct_g_eval_params_string(
             self.evaluation_params
         )
-        prompt = GEvalTemplate.generate_evaluation_steps(
+        prompt = ConversationalGEvalTemplate.generate_evaluation_steps(
             criteria=self.criteria, parameters=g_eval_params_str
         )
         if self.using_native_model:
-            res, cost = self.model.generate(prompt)
+            res, cost = self.model.generate(prompt, schema=Steps)
             self.evaluation_cost += cost
-            data = trimAndLoadJson(res, self)
-            return data["steps"]
+            return res.steps
         else:
             try:
                 res: Steps = self.model.generate(prompt, schema=Steps)
@@ -202,41 +202,24 @@ class GEvalEvaluator(BaseMetric):
                 return data["steps"]
 
     async def _a_evaluate(
-        self, test_case: ModelTestCase, _additional_context: Optional[str] = None
+        self, test_case: LLMTestCase
     ) -> Tuple[Union[int, float], str]:
-        test_case_content = construct_test_case_string(
-            self.evaluation_params, test_case
-        )
+        turns = format_turns(test_case.turns, self.evaluation_params)
         g_eval_params_str = construct_g_eval_params_string(
             self.evaluation_params
         )
-        if not self.strict_mode:
-            rubric_str = format_rubrics(self.rubric) if self.rubric else None
-            prompt = GEvalTemplate.generate_evaluation_results(
-                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
-                test_case_content=test_case_content,
-                parameters=g_eval_params_str,
-                rubric=rubric_str,
-                score_range=get_score_range(self.rubric),
-                _additional_context=_additional_context,
-            )
-        else:
-            prompt = GEvalTemplate.generate_strict_evaluation_results(
-                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
-                test_case_content=test_case_content,
-                parameters=g_eval_params_str,
-                _additional_context=_additional_context,
-            )
+
+        prompt = ConversationalGEvalTemplate.generate_evaluation_results(
+            evaluation_steps=self.number_evaluation_steps(),
+            conversation=turns,
+            parameters=g_eval_params_str,
+        )
 
         try:
-            # don't use log probabilities for unsupported gpt models
-            if no_log_prob_support(self.model):
-                raise AttributeError("log_probs unsupported.")
-
             # Don't have to check for using native model
             # since generate raw response only exist for deepeval's native model
             res, cost = await self.model.a_generate_raw_response(
-                prompt, top_logprobs=self.top_logprobs
+                prompt, top_logprobs=20
             )
             self.evaluation_cost += cost
             data = trimAndLoadJson(res.choices[0].message.content, self)
@@ -247,7 +230,7 @@ class GEvalEvaluator(BaseMetric):
                 return score, reason
 
             try:
-                weighted_summed_score = calculate_weighted_summed_score(
+                weighted_summed_score = self.generate_weighted_summed_score(
                     score, res
                 )
                 return weighted_summed_score, reason
@@ -257,10 +240,11 @@ class GEvalEvaluator(BaseMetric):
             AttributeError
         ):  # This catches the case where a_generate_raw_response doesn't exist.
             if self.using_native_model:
-                res, cost = await self.model.a_generate(prompt)
+                res, cost = await self.model.a_generate(
+                    prompt, schema=ReasonScore
+                )
                 self.evaluation_cost += cost
-                data = trimAndLoadJson(res, self)
-                return data["score"], data["reason"]
+                return res.score, res.reason
             else:
                 try:
                     res: ReasonScore = await self.model.a_generate(
@@ -272,41 +256,23 @@ class GEvalEvaluator(BaseMetric):
                     data = trimAndLoadJson(res, self)
                     return data["score"], data["reason"]
 
-    def _evaluate(
-        self, test_case: ModelTestCase, _additional_context: Optional[str] = None
+    def evaluate(
+        self, test_case: ConversationalTestCase
     ) -> Tuple[Union[int, float], str]:
-        test_case_content = construct_test_case_string(
-            self.evaluation_params, test_case
-        )
+        turns = format_turns(test_case.turns, self.evaluation_params)
         g_eval_params_str = construct_g_eval_params_string(
             self.evaluation_params
         )
 
-        if not self.strict_mode:
-            rubric_str = format_rubrics(self.rubric) if self.rubric else None
-            prompt = GEvalTemplate.generate_evaluation_results(
-                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
-                test_case_content=test_case_content,
-                parameters=g_eval_params_str,
-                rubric=rubric_str,
-                score_range=get_score_range(self.rubric),
-                _additional_context=_additional_context,
-            )
-        else:
-            prompt = GEvalTemplate.generate_strict_evaluation_results(
-                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
-                test_case_content=test_case_content,
-                parameters=g_eval_params_str,
-                _additional_context=_additional_context,
-            )
+        prompt = ConversationalGEvalTemplate.generate_evaluation_results(
+            evaluation_steps=self.number_evaluation_steps(),
+            conversation=turns,
+            parameters=g_eval_params_str,
+        )
 
         try:
-            # don't use log probabilities for unsupported gpt models
-            if no_log_prob_support(self.model):
-                raise AttributeError("log_probs unsupported.")
-
             res, cost = self.model.generate_raw_response(
-                prompt, top_logprobs=self.top_logprobs
+                prompt, top_logprobs=20
             )
             self.evaluation_cost += cost
             data = trimAndLoadJson(res.choices[0].message.content, self)
@@ -317,7 +283,7 @@ class GEvalEvaluator(BaseMetric):
                 return score, reason
 
             try:
-                weighted_summed_score = calculate_weighted_summed_score(
+                weighted_summed_score = self.generate_weighted_summed_score(
                     score, res
                 )
                 return weighted_summed_score, reason
@@ -326,10 +292,9 @@ class GEvalEvaluator(BaseMetric):
         except AttributeError:
             # This catches the case where a_generate_raw_response doesn't exist.
             if self.using_native_model:
-                res, cost = self.model.generate(prompt)
+                res, cost = self.model.generate(prompt, schema=ReasonScore)
                 self.evaluation_cost += cost
-                data = trimAndLoadJson(res, self)
-                return data["score"], data["reason"]
+                return res.score, res.reason
             else:
                 try:
                     res: ReasonScore = self.model.generate(
@@ -340,6 +305,59 @@ class GEvalEvaluator(BaseMetric):
                     res = self.model.generate(prompt)
                     data = trimAndLoadJson(res, self)
                     return data["score"], data["reason"]
+
+    def generate_weighted_summed_score(
+        self, raw_score: int, raw_response: ChatCompletion
+    ) -> Union[int, float]:
+        try:
+            generated_logprobs = raw_response.choices[0].logprobs.content
+            # First, locate the token that we care for logprobs, i.e., the token matching the score
+            score_logprobs = None
+            for token_logprobs in generated_logprobs:
+                if token_logprobs.token == str(raw_score):
+                    score_logprobs = token_logprobs
+                    break
+            # Then, calculate the score based on the logprobs
+            token_linear_probability: Dict[int, float] = {}
+            sum_linear_probability = 0
+            # Filter out tokens with <1% linear probability, i.e., logprobs < math.log(0.01)
+            min_logprob = math.log(0.01)
+            for token_logprob in score_logprobs.top_logprobs:
+                logprob = token_logprob.logprob
+
+                # Filter out low probability tokens
+                if logprob < min_logprob:
+                    continue
+                # Filter out non-decimal token to prevent errors in later int(token) conversion
+                if not token_logprob.token.isdecimal():
+                    continue
+
+                # Calculate the linear probability
+                linear_prob = math.exp(logprob)
+                token_score = int(token_logprob.token)
+                if token_linear_probability.get(token_score):
+                    token_linear_probability[token_score] += linear_prob
+                else:
+                    token_linear_probability[token_score] = linear_prob
+                sum_linear_probability += linear_prob
+
+            sum_of_weighted_scores = 0.0
+            for score, prob in token_linear_probability.items():
+                sum_of_weighted_scores += score * prob
+
+            # Scale the sum of linear probability to 1
+            weighted_summed_score = (
+                sum_of_weighted_scores / sum_linear_probability
+            )
+            return weighted_summed_score
+        except:
+            raise
+
+    def number_evaluation_steps(self):
+        evaluation_steps = """"""
+        for index, string in enumerate(self.evaluation_steps, start=1):
+            evaluation_steps += f"{index}. {string}\n"
+        return evaluation_steps
 
     def is_successful(self) -> bool:
         if self.error is not None:
@@ -354,6 +372,6 @@ class GEvalEvaluator(BaseMetric):
     @property
     def __name__(self):
         if self._include_g_eval_suffix:
-            return f"{self.name} (GEval)"
+            return f"{self.name} (Conversational GEval)"
         else:
             return self.name

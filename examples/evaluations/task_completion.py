@@ -7,33 +7,50 @@ from agensight.eval.test_case import ModelTestCase, ToolCall
 from agensight.eval.metrics import TaskCompletionMetric
 
 metric = TaskCompletionMetric(
-    threshold=0.7,
+    threshold=0.8,
     model="gpt-4o-mini",
     include_reason=True
 )
+
 test_case = ModelTestCase(
-    input="Plan a 3-day itinerary for Paris with cultural landmarks and local cuisine.",
+    input="Create a Python script that implements a REST API endpoint for user authentication with JWT tokens.",
     actual_output=(
-        "Day 1: Eiffel Tower, dinner at Le Jules Verne. "
-        "Day 2: Louvre Museum, lunch at Angelina Paris. "
-        "Day 3: Montmartre, evening at a wine bar."
+        "Here's a Flask-based implementation of a JWT authentication endpoint:\n\n"
+        "from flask import Flask, request, jsonify\n"
+        "import jwt\n"
+        "import datetime\n\n"
+        "app = Flask(__name__)\n"
+        "app.config['SECRET_KEY'] = 'your-secret-key'\n\n"
+        "@app.route('/auth/login', methods=['POST'])\n"
+        "def login():\n"
+        "    auth = request.get_json()\n"
+        "    if not auth or not auth.get('username') or not auth.get('password'):\n"
+        "        return jsonify({'message': 'Invalid credentials'}), 401\n"
+        "    # Add your user verification logic here\n"
+        "    token = jwt.encode({'user': auth['username'], 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)},\n"
+        "                       app.config['SECRET_KEY'])\n"
+        "    return jsonify({'token': token})\n"
     ),
     tools_called=[
         ToolCall(
-            name="Itinerary Generator",
-            description="Creates travel plans based on destination and duration.",
-            input_parameters={"destination": "Paris", "days": 3},
+            name="Code Generator",
+            description="Generates secure authentication code with best practices.",
+            input_parameters={"framework": "Flask", "auth_type": "JWT"},
             output=[
-                "Day 1: Eiffel Tower, Le Jules Verne.",
-                "Day 2: Louvre Museum, Angelina Paris.",
-                "Day 3: Montmartre, wine bar.",
+                "Flask application setup",
+                "JWT token generation",
+                "Login endpoint implementation"
             ],
         ),
         ToolCall(
-            name="Restaurant Finder",
-            description="Finds top restaurants in a city.",
-            input_parameters={"city": "Paris"},
-            output=["Le Jules Verne", "Angelina Paris", "local wine bars"],
+            name="Security Validator",
+            description="Validates security best practices in authentication code.",
+            input_parameters={"code_type": "authentication"},
+            output=[
+                "Secret key configuration",
+                "Input validation",
+                "Token expiration"
+            ],
         ),
     ],
 )

@@ -10,7 +10,6 @@ from agensight import init
 from agensight import trace, span
 from openai import OpenAI
 import logging
-
 from agensight.eval.metrics import GEvalEvaluator
 
 # Set up logging
@@ -39,7 +38,8 @@ factual_accuracy = GEvalEvaluator(
         name="Factual Accuracy",
         criteria="Evaluate whether the actual output contains factually accurate information based on the expected output.",
         threshold=0.7,
-        verbose_mode=True
+        verbose_mode=True,
+        model="gpt-4o-mini"
 )
 
 helpfulness = GEvalEvaluator(
@@ -47,6 +47,7 @@ helpfulness = GEvalEvaluator(
         criteria="Evaluate whether the output is helpful and addresses the user's input question.",
         threshold=0.6,
         verbose_mode=True,
+        model="gpt-4o-mini"
 )
 
 

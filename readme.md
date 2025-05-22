@@ -81,7 +81,7 @@ if __name__ == "__main__":
     main()
 ```
 
-## Evaluating Modular Components
+## LLM Evaluations
 
 ### GEval: Custom Evaluation Metrics for LLM Applications
 
@@ -200,7 +200,11 @@ Agensight uses a configuration file (`agensight.config.json` by default) to defi
 
 ```
 
+## Evaluation System
 
+We use a robust evaluation system for AI model outputs, built on top of the [deepeval](https://github.com/confident-ai/deepeval) framework. This system supports code generation, technical support, and tool usage evaluations.
+
+**Learn more:** [See full Evaluation System documentation](docs/evaluations.md)
 
 ## Contributing
 

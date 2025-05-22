@@ -9,10 +9,24 @@ from agensight.eval.metrics import ToolCorrectnessMetric
 
 # Define a new test case
 test_case = ModelTestCase(
-    input="Can you help me book a hotel in Paris for next weekend?",
-    actual_output="Sure! I found a few great hotels in Paris for next weekend.",
-    tools_called=[ToolCall(name="HotelSearch"), ToolCall(name="FlightLookup")],
-    expected_tools=[ToolCall(name="PhoneCall")],
+    input="Analyze this Python code for potential security vulnerabilities and suggest improvements.",
+    actual_output="I've analyzed the code and found several security concerns that need to be addressed.",
+    tools_called=[
+        ToolCall(
+            name="CodeAnalyzer",
+            description="Static code analysis tool for security vulnerabilities"
+        ),
+        ToolCall(
+            name="DependencyChecker",
+            description="Checks for outdated or vulnerable dependencies"
+        )
+    ],
+    expected_tools=[
+        ToolCall(
+            name="SecurityLinter",
+            description="Advanced security-focused code linter"
+        )
+    ],
 )
 
 # Initialize the metric
