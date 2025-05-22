@@ -103,10 +103,11 @@ def _make_io_from_openai_attrs(attrs, span_id, span_name):
     return json.dumps({"prompts": prompts, "completions": completions})
 
 class DBSpanExporter(SpanExporter):
-    def export(self, spans):
+    def export(self, spans):            
         conn = get_db()
         total_tokens_by_trace = defaultdict(int)
         span_map = {format(span.get_span_context().span_id, "016x"): span for span in spans}
+
 
         for span in spans: 
             ctx = span.get_span_context()
@@ -118,7 +119,6 @@ class DBSpanExporter(SpanExporter):
             end = span.end_time / 1e9
             duration = end - start
 
-            print(span)
 
             is_llm = any(k in str(attrs) or k in span.name.lower() for k in ["llm", "openai", "gen_ai", "completion"])
             if "gen_ai.normalized_input_output" not in attrs and is_llm:
@@ -143,7 +143,6 @@ class DBSpanExporter(SpanExporter):
 
             try:
                 nio = attrs.get("gen_ai.normalized_input_output")
-                print("nio", nio)
                 if nio:
                     prompts, completions = parse_normalized_io_for_span(span_id, nio)
                     for p in prompts:
@@ -162,8 +161,10 @@ class DBSpanExporter(SpanExporter):
 
 
             try:
+
                 # Use the metrics configuration from the span
                 metrics_configs_str = attrs.get("metrics.configs")
+
                 if metrics_configs_str and "gen_ai.normalized_input_output" in attrs:
                     # Parse metrics configuration
                     metrics_configs = json.loads(metrics_configs_str)
@@ -186,7 +187,7 @@ class DBSpanExporter(SpanExporter):
                             
                             if criteria:
                                 # Call evaluate_with_gval with parameters from the config
-                                result = evaluate_with_gval(
+                                evaluate_with_gval(
                                     input_text=input_text,
                                     output_text=output_text,
                                     name=metric_name,
@@ -201,7 +202,6 @@ class DBSpanExporter(SpanExporter):
                                     source="automatic",
                                     meta={"trace_id": trace_id, "span_name": span.name}
                                 )
-                                print(f"Evaluated {metric_name}: {result.get('score')} - {result.get('reason')}")
 
             except Exception as e:
                 print(f"Error in direct evaluation using configs for span {span_id}: {e}")

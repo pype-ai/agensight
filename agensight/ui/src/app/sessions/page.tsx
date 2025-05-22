@@ -7,7 +7,7 @@ import { ReactTable } from '@/components/ReactTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 
-function Sessions() {
+export default function Sessions() {
   const {
     data: sessionsData,
     isLoading: sessionsLoading,
@@ -84,4 +84,3 @@ function Sessions() {
   )
 }
 
-export default Sessions

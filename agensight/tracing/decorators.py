@@ -14,6 +14,7 @@ from agensight.tracing.session import is_session_enabled, get_session_id
 from agensight.tracing.context import trace_input, trace_output
 from agensight.tracing.db import get_db
 from agensight.eval.metrics.base import BaseMetric
+import time, json
 # Global contextvars
 current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
@@ -39,8 +40,6 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
                 enable_session_tracking()
                 set_session_id(session_id)
                 try:
-                    from agensight.tracing.db import get_db
-                    import time, json
                     conn = get_db()
                     conn.execute(
                         "INSERT OR IGNORE INTO sessions (id, started_at, session_name, user_id, metadata) VALUES (?, ?, ?, ?, ?)",
@@ -145,8 +144,6 @@ def normalize_input_output(
 
 
 
-
-
 def span(
     name: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
@@ -154,7 +151,6 @@ def span(
     output: Optional[Any] = None,
     metrics: Optional[List[BaseMetric]] = None,
 ):
-        
     tracer = ot_trace.get_tracer("default")
     def decorator(func: Callable):
         @functools.wraps(func)
@@ -185,7 +181,7 @@ def span(
                     if hasattr(metric, "criteria"):
                         config["criteria"] = metric.criteria
                     if hasattr(metric, "model"):
-                        config["model"] = metric.model
+                        config["model"] = metric.model.get_model_name()
                     if hasattr(metric, "threshold"):
                         config["threshold"] = metric.threshold
                     if hasattr(metric, "strict_mode"):

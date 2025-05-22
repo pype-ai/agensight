@@ -1,6 +1,5 @@
 "use client"
 
-import Link from 'next/link';
 
 import {
   Home,
@@ -33,6 +32,9 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link'
+
 
 // Define navigation items as a JSON structure
 const navigationItems = [
@@ -87,6 +89,7 @@ const navigationItems = [
 
 export function AppSidebar() {
   const { open, toggleSidebar } = useSidebar();
+  const router = useRouter();
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(
     () => Object.fromEntries(navigationItems.map(item => [item.label, false]))
   );

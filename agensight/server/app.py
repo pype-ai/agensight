@@ -7,6 +7,7 @@ import logging
 from typing import Dict
 from flask import Flask
 from starlette.middleware.wsgi import WSGIMiddleware
+
 # Import routers from route modules
 from .routes.config import config_router, config_bp
 from .routes.trace import trace_router, trace_bp
@@ -23,11 +24,10 @@ app = FastAPI(title="AgenSight API",debug=True)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5001", "http://127.0.0.1:5001"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_origins=["http://localhost","http://0.0.0.0","http://localhost:5001","http://0.0.0.0:3000","http://localhost:3000","http://0.0.0.0:5001","http://0.0.0.0:5000","http://localhost:5000"],  # Allow all origins
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Type", "Authorization"],
 )
 class NoCacheStaticFiles(StaticFiles):
     async def get_response(self, path, scope):
@@ -79,7 +79,6 @@ async def spa_fallback(full_path: str, request: Request):
 async def startup_event():
     """Run startup tasks"""
     logger.info("Server starting up...")
-    logger.info(":rocket: AgenSight is running! Open http://0.0.0.0:5001/dashboard in your browser.")
     # Initialize the configuration system (file-based only)
     try:
         from .utils.config_utils import initialize_config, ensure_version_directory
@@ -135,8 +134,15 @@ async def debug_data():
             "status": "error",
             "message": str(e)
         }
+
+
 def start_server():
-    """Start the server"""
-    uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=5001,log_level="info")
+    """Start the server on an available port"""
+    try:
+        uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=5001, log_level="info")
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        raise
+
 if __name__ == "__main__":
     start_server()

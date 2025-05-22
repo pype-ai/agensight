@@ -6,7 +6,7 @@ with open("readme.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="agensight",
-    version="0.4.0",
+    version="0.4.8",
     author="Pype",
     description="A Python SDK for logging and visualizing OpenAI agent interactions, with a built-in CLI and web dashboard.",
     long_description=long_description,
@@ -16,6 +16,7 @@ setup(
         "openai",
         "requests",
         "flask",
+        "nest_asyncio",
         "flask_cors",
         "fastapi",
         "uvicorn",
@@ -32,7 +33,14 @@ setup(
         "opentelemetry-api",
         "opentelemetry-instrumentation",
         "opentelemetry-instrumentation-openai",
-        "anthropic"
+        "anthropic",
+        "scikit-learn>=1.0.0",
+        "pandas>=1.3.0",
+        "numpy>=1.20.0",
+        "google-generativeai",  # For Gemini model support
+        "anthropic",  # For Claude model support
+        "retry",  # For retry functionality
+        "rich", 
     ],
     entry_points={
         "console_scripts": [
@@ -41,5 +49,11 @@ setup(
     },
     python_requires=">=3.10",
     include_package_data=True,
+    extras_require={
+        'optional': [
+            'Dbias',
+            'allennlp',
+        ],
+    },
 )
 
