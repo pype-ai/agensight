@@ -29,6 +29,9 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link'
+
 
 // Define navigation items as a JSON structure
 const navigationItems = [
@@ -38,23 +41,23 @@ const navigationItems = [
     href: '/dashboard',
     children: null,
   },
-  {
-    label: 'Traces',
-    icon: Activity,
-    href: null,
-    children: [
-      {
-        label: 'Sessions',
-        icon: List,
-        href: '/sessions',
-      },
-      {
-        label: 'Traces',
-        icon: FileText,
-        href: '/traces',
-      },
-    ],
-  },
+  // {
+  //   label: 'Traces',
+  //   icon: Activity,
+  //   href: null,
+  //   children: [
+  //     {
+  //       label: 'Sessions',
+  //       icon: List,
+  //       href: '/sessions',
+  //     },
+  // {
+  //   label: 'Traces',
+  //   icon: FileText,
+  //   href: '/traces',
+  // },
+  //   ],
+  // },
   // if needed add more menu items
   // {
   //   label: 'Settings',
@@ -83,6 +86,7 @@ const navigationItems = [
 
 export function AppSidebar() {
   const { open, toggleSidebar } = useSidebar();
+  const router = useRouter();
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(
     () => Object.fromEntries(navigationItems.map(item => [item.label, false]))
   );
@@ -165,10 +169,10 @@ export function AppSidebar() {
           asChild
           className="gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
         >
-          <a href={item.href} className="flex items-center">
-            <IconComponent className={cn('w-5 h-5', !open && 'mx-auto')} />
-            {open && <span className="font-medium">{item.label}</span>}
-          </a>
+      <Link href={item.href}>
+    <IconComponent className={cn('w-5 h-5', !open && 'mx-auto')} />
+                {open && <span className="font-medium">{item.label}</span>}
+              </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );

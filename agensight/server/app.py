@@ -34,11 +34,10 @@ app = FastAPI(title="AgenSight API",debug=True)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5001", "http://127.0.0.1:5001"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_origins=["http://localhost","http://0.0.0.0","http://localhost:5001","http://0.0.0.0:3000","http://localhost:3000","http://0.0.0.0:5001","http://0.0.0.0:5000","http://localhost:5000"],  # Allow all origins
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Type", "Authorization"],
 )
 
 class NoCacheStaticFiles(StaticFiles):
@@ -81,7 +80,6 @@ async def health_check():
 async def startup_event():
     """Run startup tasks"""
     logger.info("Server starting up...")
-    logger.info("🚀 AgenSight is running! Open http://0.0.0.0:5001/dashboard in your browser.")
 
     # Initialize the configuration system (file-based only)
     try:
@@ -153,25 +151,11 @@ async def debug_data():
             "message": str(e)
         }
 
-def find_free_port(start_port=5000, max_port=5100):
-    """
-    Find a free port between start_port and max_port
-    """
-    for port in range(start_port, max_port):
-        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-            try:
-                sock.bind(('', port))
-                return port
-            except OSError:
-                continue
-    raise RuntimeError(f"No free ports found between {start_port} and {max_port}")
 
 def start_server():
     """Start the server on an available port"""
     try:
-        port = find_free_port(start_port=5000)
-        print(f"Starting server on port {port}")
-        uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=port, log_level="info")
+        uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=5001, log_level="info")
     except Exception as e:
         print(f"Error starting server: {e}")
         raise
