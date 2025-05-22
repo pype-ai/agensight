@@ -3,6 +3,9 @@ import os
 # Add the parent directory to Python path so it can find the agensight package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from IPython.display import Image, display

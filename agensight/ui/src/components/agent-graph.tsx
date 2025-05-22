@@ -371,6 +371,7 @@ function FlowChart({ agents = [], connections = [], onNodeClick }: Props) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        zoomOnScroll={false}
         onNodeClick={(e, node) => {
           if (node.id !== "__start__" && node.id !== "__end__" && node.id !== "Start" && node.id !== "End" && onNodeClick) {
             onNodeClick(node.id);
