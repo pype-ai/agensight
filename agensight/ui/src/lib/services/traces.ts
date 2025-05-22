@@ -117,3 +117,52 @@ export async function getAllTraces(): Promise<any[]> {
   
   return [];
 } 
+
+export async function getAllSessions(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions`);
+
+    if (!response.ok) {
+      throw new Error(`Error fetching sessions: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error);
+    throw error;
+  }
+}
+
+export async function getSingleSessionTraces(sessionId: string): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/traces`);
+
+    if (!response.ok) {
+      throw new Error(`Error fetching traces: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch traces:', error);
+    throw error;
+  }
+}
+
+export async function getSpans(
+  traceId: string
+): Promise<any[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/traces/${traceId}/spans`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error fetching spans: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch spans:', error);
+    throw error;
+  }
+}
