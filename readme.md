@@ -114,6 +114,9 @@ def improve_joke(actual_output, expected_output):
 
 ```
 
+Agensight offers a variety of evaluation metrics tailored to different use cases. Our metrics include Task Completion, Tool Correctness, Conversation Completeness, and Conversation Relevancy, each designed to provide specific insights into LLM performance. For more details, visit our documentation page.
+
+
 ## Playground Setup
 
 To set up the agent playground, we provide an MCP server that, when integrated with Cursor or Windsurf, visually maps your agent workflows. It explores your codebase using Cursor or Windsurf and generates an editable agent workflow configuration (JSON file). You can then visualize your agent workflows in the studio by simply running `agensight view` in your terminal.
@@ -200,11 +203,6 @@ Agensight uses a configuration file (`agensight.config.json` by default) to defi
 
 ```
 
-## Evaluation System
-
-We use a robust evaluation system for AI model outputs, built on top of the [deepeval](https://github.com/confident-ai/deepeval) framework. This system supports code generation, technical support, and tool usage evaluations.
-
-**Learn more:** [See full Evaluation System documentation](docs/evaluations.md)
 
 ## Contributing
 
