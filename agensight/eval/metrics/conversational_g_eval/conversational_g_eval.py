@@ -217,7 +217,6 @@ class ConversationalGEval(BaseMetric):
 
         try:
             # Don't have to check for using native model
-            # since generate raw response only exist for deepeval's native model
             res, cost = await self.model.a_generate_raw_response(
                 prompt, top_logprobs=20
             )

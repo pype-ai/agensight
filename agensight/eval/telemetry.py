@@ -27,7 +27,7 @@ class Feature:
     UNKNOWN = "unknown"
 
 
-TELEMETRY_DATA_FILE = ".deepeval_telemetry.txt"
+TELEMETRY_DATA_FILE = ".agensight_telemetry.txt"
 TELEMETRY_PATH = os.path.join(HIDDEN_DIR, TELEMETRY_DATA_FILE)
 
 
@@ -42,8 +42,8 @@ os.makedirs(HIDDEN_DIR, exist_ok=True)
 if os.path.exists(TELEMETRY_DATA_FILE):
     os.rename(TELEMETRY_DATA_FILE, TELEMETRY_PATH)
 
-if os.path.exists(".deepeval-cache.json"):
-    os.rename(".deepeval-cache.json", f"{HIDDEN_DIR}/.deepeval-cache.json")
+if os.path.exists(".agensight-cache.json"):
+    os.rename(".agensight-cache.json", f"{HIDDEN_DIR}/.agensight-cache.json")
 
 if os.path.exists("temp_test_run_data.json"):
     os.rename(

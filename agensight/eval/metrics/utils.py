@@ -121,7 +121,7 @@ def construct_verbose_logs(metric: BaseMetric, steps: List[str]) -> str:
         if i < len(steps) - 2:
             verbose_logs += " \n \n"
     if metric.verbose_mode:
-        # only print reason and score for deepeval
+        # only print reason and score
         print_verbose_logs(metric.__name__, verbose_logs + f"\n \n{steps[-1]}")
 
     return verbose_logs
