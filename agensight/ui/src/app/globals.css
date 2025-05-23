@@ -251,6 +251,28 @@
   .dark .grid-bg {
     background-image: none;
   }
+
+  /* Gantt chart scroll */
+  .gantt-chart-scroll {
+    overflow-x: auto !important;
+    scrollbar-color: #334155 #0f172a;
+    scrollbar-width: thin;
+  }
+  .gantt-chart-scroll::-webkit-scrollbar {
+    height: 10px;
+  }
+  .gantt-chart-scroll::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 6px;
+  }
+  .gantt-chart-scroll::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+
+  /* Gradient overlay should not block interaction */
+  .gantt-chart-scroll .pointer-events-none {
+    pointer-events: none;
+  }
 }
 
 /* Add styles to fix markdown editor in light/dark mode */
@@ -570,6 +592,19 @@
   color: #1e1e2f !important;
   padding: 0.1em 0.3em;
   border-radius: 3px;
+}
+
+/* Gantt chart scrollable container */
+.gantt-chart-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+.gantt-chart-content {
+  display: block;
+  min-width: 800px;
+}
+.gantt-span-box {
+  min-width: 24px;
 }
 
 /* Sticky table styles */

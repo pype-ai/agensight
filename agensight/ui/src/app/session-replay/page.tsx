@@ -17,13 +17,18 @@ function SessionReplay() {
   const [allTraceDetails, setAllTraceDetails] = useState([
     {
       id: 'trace-1',
-      trace_input: 'User: Hi, how can I help you?',
-      trace_output: 'Assistant: I want to know more about your product.'
+      trace_output: 'ass: Hi, how can I help you?',
+      trace_input: 'use: I want to know more about your product.'
     },
     {
       id: 'trace-2',
-      trace_input: 'User: Sure! What would you like to know?',
-      trace_output: 'Assistant: Pricing and features.'
+      trace_output: 'ass: Sure! What would you like to know?',
+      trace_input: 'use: Pricing and features.'
+    },
+    {
+      id: 'trace-3',
+      trace_output: 'ass: sadasdnsow?',
+      trace_input: 'use: asdasdsads.'
     },
   ]);
 
