@@ -105,7 +105,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```bash
 python --version
 ```
-
+then ,
 ```bash
 pip install --upgrade agensight
 ```
