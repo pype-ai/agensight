@@ -31,13 +31,13 @@ function SessionDetailsSheet({
   const [activeTab, setActiveTab] = useState("session-details");
 
   const router = useRouter();
-  const handleRunExperimentButton = () => {
-    if (session?.id) {
-      router.push(`/session-replay?session_id=${encodeURIComponent(session.id)}`);
-    } else {
-      router.push('/session-replay');
-    }
-  }
+  // const handleRunExperimentButton = () => {
+  //   if (session?.id) {
+  //     router.push(`/session-replay?session_id=${encodeURIComponent(session.id)}`);
+  //   } else {
+  //     router.push('/session-replay');
+  //   }
+  // }
 
   // Fetch traces for this session (metadata only)
   const {

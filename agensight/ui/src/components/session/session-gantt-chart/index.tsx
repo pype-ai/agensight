@@ -44,12 +44,20 @@ export const SessionGanttChart = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const [showScrollBadge, setShowScrollBadge] = useState(false);
   const [showGradient, setShowGradient] = useState(false);
+  // Viewport indicator state
+  const [scrollState, setScrollState] = useState({
+    scrollLeft: 0,
+    clientWidth: 0,
+    scrollWidth: 1, // avoid division by zero
+  });
+  // (All drag logic removed)
 
   useEffect(() => {
     const checkScroll = () => {
       const container = containerRef.current;
       if (!container) return;
-      const { scrollWidth, clientWidth } = container;
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setScrollState({ scrollLeft, scrollWidth, clientWidth });
       const overflowing = scrollWidth > clientWidth + 2; // fudge factor
       setShowScrollBadge(overflowing);
       setShowGradient(overflowing);
@@ -238,6 +246,33 @@ export const SessionGanttChart = ({
               borderLeft: `2px solid ${getSpanColor("session")}`,
             }}
           ></div>
+          {/* Viewport indicator overlay */}
+          {scrollState.scrollWidth > scrollState.clientWidth && (
+            <>
+              {/* Left gradient overlay for overflow hint */}
+              <div className="pointer-events-none absolute left-0 top-0 h-full w-6 z-20" style={{ background: 'linear-gradient(to right, rgba(16,23,42,0.18) 60%, transparent 100%)' }} />
+              {/* Right gradient overlay for overflow hint */}
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-6 z-20" style={{ background: 'linear-gradient(to left, rgba(16,23,42,0.18) 60%, transparent 100%)' }} />
+
+              {/* Glassy pill indicator with subtle arrows */}
+              <div
+                className="absolute top-0 bottom-0 border border-white/60 rounded-[8px] z-30 shadow-xl flex items-center justify-between px-1 transition-all duration-200 backdrop-blur-sm"
+                style={{
+                  left: `${(scrollState.scrollLeft / scrollState.scrollWidth) * 100}%`,
+                  width: `${(scrollState.clientWidth / scrollState.scrollWidth) * 100}%`,
+                  minWidth: 28,
+                  background: 'rgba(255,255,255,0.22)',
+                  borderColor: 'rgba(255,255,255,0.38)',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              >
+                {/* Subtle chevrons */}
+                <svg width="10" height="14" viewBox="0 0 10 14" fill="none" className="opacity-50"><path d="M7 2L3 7L7 12" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="10" height="14" viewBox="0 0 10 14" fill="none" className="opacity-50"><path d="M3 2L7 7L3 12" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -314,6 +349,7 @@ export const SessionGanttChart = ({
                         top: 0,
                       }}
                       onClick={() => onSelectTrace(trace.id)}
+                      onDoubleClick={() => toggleTraceExpansion(trace.id)}
                     >
                       {traceWidthPos > 5 && (
                         <div className="absolute inset-0 flex items-center px-2 cursor-pointer">
