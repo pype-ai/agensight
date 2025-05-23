@@ -25,7 +25,7 @@
    <a href="https://github.com/pype-ai/agensight/blob/update-readme/LICENSE">
    <img src="https://img.shields.io/badge/License-MIT-E11311.svg" alt="MIT License">
    </a>
-   <a href="https://pypi.org/project/agensight/0.4.8/">
+   <a href="https://pypi.org/project/agensight/0.5.3/">
       <img alt="PyPI Downloads" src="https://img.shields.io/pypi/dm/agensight?logo=python&logoColor=white&label=pypi%20agensight&color=blue">
    </a>
    <a href="https://www.linkedin.com/company/pype-ai/posts/?feedView=all" target="_blank">
