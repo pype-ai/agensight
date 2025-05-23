@@ -48,7 +48,7 @@ pip install -r agensight/server/requirements.txt
 
 3. Run the server:
 ```bash
-python -m agensight.server.run
+python -m agensight._server.run
 ```
 
 The server will start on http://localhost:5000 by default.

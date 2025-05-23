@@ -14,8 +14,8 @@ fi
 
 
 # Run npm build in /agensigth/ui directory
-echo "Running npm run build in ./agensight/ui directory..."
-cd ./agensight/ui || { echo "Directory ./agensight/ui not found!"; exit 1; }
+echo "Running npm run build in ./agensight/_ui directory..."
+cd ./agensight/_ui || { echo "Directory ./agensight/_ui not found!"; exit 1; }
 npm run build
 
 cd ../../

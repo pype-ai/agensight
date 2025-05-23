@@ -3,6 +3,8 @@ from .tracing.session import enable_session_tracking, set_session_id
 from .integrations import instrument_openai
 from .integrations import instrument_anthropic 
 from .tracing.decorators import trace, span
+from . import tracing
+from . import eval
 import json
 from .eval.setup import setup_eval
 

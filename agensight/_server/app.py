@@ -50,7 +50,7 @@ flask_app.register_blueprint(trace_bp)
 # This allows both FastAPI and Flask routes to work
 app.mount("/flask-compat", WSGIMiddleware(flask_app))
 # Serve static files
-static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../ui/out"))
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../_ui/out"))
 if os.path.exists(os.path.join(static_dir, "_next")):
     app.mount("/_next", NoCacheStaticFiles(directory=os.path.join(static_dir, "_next"), html=True), name="next")
 if os.path.exists(os.path.join(static_dir, "static")):
@@ -139,7 +139,7 @@ async def debug_data():
 def start_server():
     """Start the server on an available port"""
     try:
-        uvicorn.run("agensight.server.app:app", host="0.0.0.0", port=5001, log_level="info")
+        uvicorn.run("agensight._server.app:app", host="0.0.0.0", port=5001, log_level="info")
     except Exception as e:
         print(f"Error starting server: {e}")
         raise

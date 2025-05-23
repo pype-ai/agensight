@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 
-with open("readme.md", "r", encoding="utf-8") as fh:
+with open("readme.sdk.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="agensight",
-    version="0.4.8",
+    version="0.5.3",
     author="Pype",
     description="A Python SDK for logging and visualizing OpenAI agent interactions, with a built-in CLI and web dashboard.",
     long_description=long_description,
