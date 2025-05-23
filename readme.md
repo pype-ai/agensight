@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 ![Langfuse GitHub Banner](https://langfuse.com/images/docs/github-readme/github-banner.png)
 
 <div align="center">
