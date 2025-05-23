@@ -1,6 +1,44 @@
-# Agensight
+![Screenshot 2025-05-23 at 3 38 12 PM](https://github.com/user-attachments/assets/62fcd28d-0f65-4557-af6e-afb9fbd80960)
 
-**<p>Open Source Exprerimentation Studio for Conversational AI Agents</p>**
+
+<div align="center">
+   <div>
+      <h3>
+         <a href="https://app.pypeai.com/">
+            <strong>Cloud</strong> 
+         </a> · 
+         <a href="https://www.youtube.com/watch?v=eunL3IFSIB8">
+            <strong>Demo</strong>
+         </a> .
+        <a href="https://pype-db52d533.mintlify.app/introduction"><strong>Docs</strong></a>
+      </h3>
+   </div>
+   <span>Agensight uses <a href="https://github.com/pype-ai/agensight/discussions"><strong>Github Discussions</strong></a>  for Support and Feature Requests.</span>
+   <br/>
+   <br/>
+   <br/>
+   <div>
+   </div>
+</div>
+
+<p align="center">
+   <a href="https://github.com/pype-ai/agensight/blob/update-readme/LICENSE">
+   <img src="https://img.shields.io/badge/License-MIT-E11311.svg" alt="MIT License">
+   </a>
+   <a href="https://pypi.org/project/agensight/0.4.8/">
+      <img alt="PyPI Downloads" src="https://img.shields.io/pypi/dm/agensight?logo=python&logoColor=white&label=pypi%20agensight&color=blue">
+   </a>
+   <a href="https://www.linkedin.com/company/pype-ai/posts/?feedView=all" target="_blank">
+   <img src="https://custom-icon-badges.demolab.com/badge/LinkedIn-0A66C2?logo=linkedin-white&logoColor=fff"
+      alt="follow on LinkedIn"></a>
+   <a href="https://github.com/pype-ai/agensight/graphs/commit-activity" target="_blank">
+     <img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/pype-ai/agensight?labelColor=%2332b583&color=%2312b76a">
+   </a>
+   <a href="https://github.com/pype-ai/agensight/issues?q=is%3Aissue%20state%3Aclosed" target="_blank">
+      <img alt="Issues closed" src="https://img.shields.io/github/issues-search?query=repo%3Apype-ai%2Fagensight%20is%3Aclosed&label=issues%20closed&labelColor=%237d89b0&color=%235d6b98">
+   </a>
+</p>
+
 
 Pype AI's Agensight is an open-source experimentation studio built for conversational AI agents. It is similar to LangGraph but supports any agentic framework (likes of Autogen, LangGraph etc) or modality (voice, image & text). With minimal code changes, Pype AI provides complete observability to help you trace agentic workflows for entire sessions or user conversations.
 
@@ -21,21 +59,25 @@ Pype AI's Agensight is an open-source experimentation studio built for conversat
 
 
 
-## Features
+## Core Features
+![3](https://github.com/user-attachments/assets/58352598-4fb8-4477-a71c-e76b27dd632c)
 
-- Auto-instrumented tracing for LLM calls
-- Local development mode for offline trace inspection
-- Customizable trace and span naming
-- Token usage tracking
-- Experimental prompt playground
-- Maintain the prompt versions
 
-## Security & Local Storage
+#### Agent Observability 
+Agensight provides comprehensive observability for your AI agents through auto-instrumented tracing of all LLM calls, function executions, and agent interactions. The local development mode enables offline trace inspection with detailed performance metrics and token usage analytics. Customize your traces and spans with meaningful names and organize them for better debugging and analysis of your agent workflows.
 
-- All data stored locally inside the SDK
-- No data uploaded or tracked externally
-- Prompts versions stored locally in `.agensight` file
-- Recommended: Run in isolated virtual environments
+#### Interactive Playground
+The interactive playground offers a visual workflow editor for designing and modifying agent workflows through an intuitive interface. All changes made in the playground automatically sync with your codebase, ensuring seamless integration between development and experimentation. The platform maintains version control for your prompts and agent configurations, allowing you to track and revert changes as needed.
+
+#### LLM Evaluations
+Evaluate your agent's performance with custom metrics tailored to your specific use cases. Agensight's evaluation framework provides automated scoring of agent responses using predefined or custom criteria, giving you instant feedback on performance. Track improvements over time with detailed evaluation reports and analytics, helping you continuously enhance your agent's capabilities.
+
+#### Conversational Replay
+Access and replay any past conversation with your agents through the session history feature. Compare different versions of your agents (model, prompt, tools) side by side to identify improvements and regressions. The interactive debugging capabilities allow you to step through conversations, making it easier to identify and fix issues in your agent's behavior.
+
+#### Security & Local Storage
+All data is stored locally inside the SDK, ensuring complete privacy and control over your information. No data is uploaded or tracked externally, and all prompt versions are stored locally in the `.agensight` file. We recommend running Agensight in isolated virtual environments for enhanced security.
+
 
 ## Quick Start
 
