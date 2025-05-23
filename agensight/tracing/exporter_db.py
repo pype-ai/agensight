@@ -108,17 +108,15 @@ class DBSpanExporter(SpanExporter):
         total_tokens_by_trace = defaultdict(int)
         span_map = {format(span.get_span_context().span_id, "016x"): span for span in spans}
 
-
-        for span in spans: 
+        for span in spans:
             ctx = span.get_span_context()
             attrs = dict(span.attributes)
             trace_id = attrs.get("trace_id") or str(uuid.uuid4())
             span_id = str(uuid.uuid4())
-            parent_id = str(uuid.uuid4()) if span.parent else None 
+            parent_id = str(uuid.uuid4()) if span.parent else None
             start = span.start_time / 1e9
             end = span.end_time / 1e9
             duration = end - start
-
 
             is_llm = any(k in str(attrs) or k in span.name.lower() for k in ["llm", "openai", "gen_ai", "completion"])
             if "gen_ai.normalized_input_output" not in attrs and is_llm:
@@ -159,17 +157,13 @@ class DBSpanExporter(SpanExporter):
             except Exception:
                 pass
 
-
             try:
 
                 # Use the metrics configuration from the span
                 metrics_configs_str = attrs.get("metrics.configs")
 
                 if metrics_configs_str and "gen_ai.normalized_input_output" in attrs:
-                    # Parse metrics configuration
                     metrics_configs = json.loads(metrics_configs_str)
-                    
-                    # Extract input and output from normalized IO
                     nio_data = json.loads(attrs.get("gen_ai.normalized_input_output"))
                     input_text = nio_data.get("prompts", [{}])[0].get("content", "")
                     output_text = nio_data.get("completions", [{}])[0].get("content", "")
@@ -208,32 +202,15 @@ class DBSpanExporter(SpanExporter):
                 pass
 
             try:
-                has_tool_calls = False
                 for i in range(5):
                     name = attrs.get(f"gen_ai.completion.0.tool_calls.{i}.name")
                     if not name:
                         break
-                    has_tool_calls = True
                     args = attrs.get(f"gen_ai.completion.0.tool_calls.{i}.arguments")
                     cursor = conn.execute("SELECT id FROM tools WHERE span_id = ? AND name = ?", (span_id, name))
-                    existing = cursor.fetchone()
-                    if not existing:
+                    if not cursor.fetchone():
                         conn.execute("INSERT INTO tools (span_id, name, arguments) VALUES (?, ?, ?)",
                                      (span_id, name, args))
-
-                if has_tool_calls and parent_id and parent_id in span_map:
-                    parent_span = span_map[parent_id]
-                    if "llm" in parent_span.name.lower() or "completion" in parent_span.name.lower():
-                        for i in range(5):
-                            name = attrs.get(f"gen_ai.completion.0.tool_calls.{i}.name")
-                            if not name:
-                                break
-                            args = attrs.get(f"gen_ai.completion.0.tool_calls.{i}.arguments")
-                            cursor = conn.execute("SELECT id FROM tools WHERE span_id = ? AND name = ?", (parent_id, name))
-                            existing = cursor.fetchone()
-                            if not existing:
-                                conn.execute("INSERT INTO tools (span_id, name, arguments) VALUES (?, ?, ?)",
-                                             (parent_id, name, args))
             except Exception:
                 pass
 

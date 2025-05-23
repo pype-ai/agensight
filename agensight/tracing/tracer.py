@@ -8,5 +8,6 @@ def get_tracer(name: str) -> Tracer:
 def start_span(tracer: Tracer, name: str, attributes: dict = None):
     attributes = attributes or {}
     if is_session_enabled():
-        attributes.setdefault("session.id", get_session_id())
+        session_id = get_session_id()
+        attributes.setdefault("session.id", session_id)
     return tracer.start_as_current_span(name, attributes=attributes)
