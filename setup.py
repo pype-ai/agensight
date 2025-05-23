@@ -6,7 +6,7 @@ with open("readme.sdk.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="agensight",
-    version="0.5.1",
+    version="0.5.2",
     author="Pype",
     description="A Python SDK for logging and visualizing OpenAI agent interactions, with a built-in CLI and web dashboard.",
     long_description=long_description,
