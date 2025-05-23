@@ -30,8 +30,9 @@ function SessionDetailsSheet({
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("session-details");
 
+  const router = useRouter();
   const handleRunExperimentButton = () => {
-    console.log('hi')
+    router.push('/session-replay');
   }
 
   // Fetch traces for this session (metadata only)
@@ -89,7 +90,6 @@ function SessionDetailsSheet({
   }
 
   // Handles clicking a trace ID: navigates to the trace details page
-  const router = useRouter();
   const handleTraceIdClick = (traceId: string, trace: any) => {
     // Store session and tab info for restoration
     sessionStorage.setItem('lastSessionId', session?.id ?? '');
@@ -192,9 +192,9 @@ function SessionDetailsSheet({
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              {/* <Button onClick={() => handleRunExperimentButton()} >
+              <Button onClick={() => handleRunExperimentButton()} >
                 Run Experiment
-              </Button> */}
+              </Button>
             </div>
           </div>
 
