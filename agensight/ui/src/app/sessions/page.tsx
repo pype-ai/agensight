@@ -6,7 +6,7 @@ import {
   getSpans,
 } from '@/lib/services/traces';
 import { useQuery } from '@tanstack/react-query';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ReactTable } from '@/components/ReactTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
@@ -17,11 +17,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { GanttChartVisualizer } from '@/components/GannChart';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 import SessionDetailsSheet from '@/components/session/session-details-sheet';
+import { useState, useEffect } from 'react';
 
 export default function Sessions() {
   const {
@@ -39,10 +36,8 @@ export default function Sessions() {
   const pageSize = 10;
   const totalRows = sessionsData?.length || 0;
   const totalPages = Math.ceil(totalRows / pageSize);
-  const [selectedSession, setSelectedSession] = React.useState<any | null>(
-    null
-  );
-  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [selectedSession, setSelectedSession] = useState<any | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const columns: ColumnDef<any>[] = useMemo(
     () => [
