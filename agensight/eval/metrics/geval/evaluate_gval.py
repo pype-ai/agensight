@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Any, Union
 
-from agensight.eval.metrics.test_case import ModelTestCase, ModelTestCaseParams
+from agensight.eval.test_case import ModelTestCase, ModelTestCaseParams
 from agensight.eval.metrics.geval.g_eval import GEvalEvaluator
 from agensight.eval.storage.db_operations import insert_evaluation
 
@@ -20,7 +20,7 @@ def evaluate_with_gval(
     strict_mode: bool = False,
     verbose_mode: bool = False,
     evaluation_steps: Optional[List[str]] = None,
-    save_to_db: bool = False,
+    save_to_db: bool = True,
     project_id: Optional[str] = None,
     source: str = "manual",
     eval_type: str = "metric",
@@ -77,6 +77,8 @@ def evaluate_with_gval(
         strict_mode=strict_mode,
         verbose_mode=verbose_mode,
     )
+
+    print(evaluator , "calculate evaluator")
     
     # Create test case with all available information
     test_case_kwargs = {
@@ -95,7 +97,7 @@ def evaluate_with_gval(
     
     # Measure and return results
     try:
-        result = evaluator.measure(test_case)
+        score = evaluator.measure(test_case)
         
         # Save to database if requested
         if save_to_db and parent_id:
@@ -115,8 +117,8 @@ def evaluate_with_gval(
                 
             eval_id = insert_evaluation(
                 metric_name=name,
-                score=result.get("score", 0.0),
-                reason=result.get("reason", ""),
+                score=score,
+                reason=evaluator.reason,
                 parent_id=parent_id,
                 parent_type=parent_type or "span",
                 project_id=project_id,
@@ -127,10 +129,8 @@ def evaluate_with_gval(
                 meta=evaluation_meta
             )
             
-            # Add eval_id to result
-            result["eval_id"] = eval_id
             
-        return result
+        return score
     except Exception as e:
         return {
             "score": 0.0,

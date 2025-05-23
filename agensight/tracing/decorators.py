@@ -14,6 +14,8 @@ from agensight.eval.metrics.base import BaseMetric
 from opentelemetry import trace as ot_trace
 from opentelemetry.trace.status import Status, StatusCode
 
+import time, json
+# Global contextvars
 current_trace_id = contextvars.ContextVar("current_trace_id", default=None)
 current_trace_name = contextvars.ContextVar("current_trace_name", default=None)
 
@@ -138,6 +140,9 @@ def normalize_input_output(
 
     return result
 
+
+
+
 def span(
     name: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
@@ -172,7 +177,7 @@ def span(
                     if hasattr(metric, "criteria"):
                         config["criteria"] = metric.criteria
                     if hasattr(metric, "model"):
-                        config["model"] = metric.model
+                        config["model"] = metric.model.get_model_name()
                     if hasattr(metric, "threshold"):
                         config["threshold"] = metric.threshold
                     if hasattr(metric, "strict_mode"):

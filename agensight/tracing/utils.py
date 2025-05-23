@@ -1,7 +1,7 @@
 import json
 import re
 from typing import List, Dict, Any
-from agensight.eval.metrics.test_case import ModelTestCase
+from agensight.eval.test_case import ModelTestCase
 
 TOKEN_PATTERNS = [
     r'"total_tokens":\s*(\d+)',

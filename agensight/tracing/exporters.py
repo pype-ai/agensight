@@ -30,7 +30,8 @@ def get_exporter(exporter_type: str):
         return ProdSpanExporter()
 
     else:
-        raise ValueError(f"Unsupported exporter: {exporter_type}")
+        print("Creating ConsoleSpanExporter")
+        return ConsoleSpanExporter()
 
 def get_collected_spans():
     return _memory_exporter_instance.spans if _memory_exporter_instance else []
