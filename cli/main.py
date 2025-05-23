@@ -2,7 +2,7 @@
 
 import argparse
 import webbrowser
-from agensight.server.app import start_server
+from agensight._server.app import start_server
 
 
 def main():
