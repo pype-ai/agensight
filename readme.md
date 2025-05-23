@@ -81,21 +81,37 @@ All data is stored locally inside the SDK, ensuring complete privacy and control
 
 ## Quick Start
 
-### Basic Setup
+### 1. Go to Your Project Directory
 
-1. **Install Agensight**
+If you already have a project:
 ```bash
-# Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install the latest version
-pip install agensight
+cd path/to/your/project
 ```
 
-2. **Start the Dashboard**
+Or, to try an example from our repo, use:
+examples/tracing/langgraph_demo.py
+
+### 2. Create and Activate a Virtual Environment
+
 ```bash
-# Launch the Agensight dashboard
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+### 3. Install Agensight
+
+**Note:** Agensight requires Python 3.10 or higher. Check your Python version with:
+
+```bash
+python --version
+```
+
+```bash
+pip install --upgrade agensight
+```
+
+### 4. Start the Dashboard
+```bash
 agensight view
 ```
 Visit http://localhost:5001 in your browser
