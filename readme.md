@@ -170,33 +170,96 @@ Add this to your Cursor/Windsurf settings:
 
 That's it! You now have both tracing and playground features set up. The dashboard at http://localhost:5001 will show your traces and allow you to edit your agents in the playground.
 
-
-
 ## Agent Observability
 
-<A line about traces and spans>
-<A picture of the session view>
+### 🛰️ Overview
+
+Agensight provides first-class support for tracing your agent workflows using just two decorators: `@trace` for high-level operations and `@span` for finer-grained steps like LLM calls or tool executions. This gives you powerful visibility into your agent's behavior across sessions, tools, and models.
+
+### 🧭 Initialize Tracing
+
+Before you use any tracing features, initialize Agensight at the start of your application:
+
+```python
+import agensight
+
+agensight.init(
+    name="chatbot-with-tools",
+    mode="prod",  # Use "local" for local development
+    project_id="abc12345",  # Required for prod/dev
+    session="user_123"      # Optional: can be an ID or full session dict
+)
+```
+
+Parameters:
+- **name**: Your app or service name
+- **mode**: One of "local", "dev", or "prod"
+- **project_id**: Required in cloud modes to associate logs
+- **session**: Optional session ID or metadata (str or {id, name, user_id})
+
+> ℹ️ If both init() and @trace() specify a session, @trace() takes precedence for that specific trace.
+
+### 📍 Create Traces with @trace
+
+The @trace decorator marks a top-level user workflow (e.g. a request handler, multi-agent loop, or RAG pipeline). All nested spans are automatically tied to this trace.
+
+```python
+from agensight import trace
+
+@trace(name="multi_agent_chat", session={"id": "xyz123", "name": "multi agent chat", "user_id": "123"})
+def main():
+    ...
+```
+
+- Automatically generates a unique trace_id
+- Associates child spans to the trace
+- Inherits or overrides session metadata
+
+### 📌 Add Spans with @span
+
+Use the @span decorator to capture individual operations like LLM calls, tool executions, or preprocessing steps. It records execution time, input/output, token usage, and more.
+
+```python
+from agensight import span
+
+@span(name="llm")
+def call_llm(messages):
+    return client.chat.completions.create(messages=messages)
+```
+
+- Captures LLM usage details (e.g. model, token count)
+- Works with OpenAI, Claude, or custom models
+- Tool calls inside spans are automatically detected if tool_choice="auto"
+
+### ✨ Features of Tracing
+
+- ✅ **Structured Trace Data**: Includes input/output, tokens used, and timing for each step
+- 🎯 **Session-Aware**: Group all traces and spans by user/session automatically
+- 🧠 **LLM-Aware**: Automatically captures model usage, prompts, completions, and costs
+- 🧰 **Tool Logging**: Captures tool invocations inside spans, no manual work needed
+- ☁️ **Cloud Compatible**: In prod/dev mode, all traces are sent to your Supabase backend
+
+### 🧪 Example
 
 ```python
 from agensight import init, trace, span
-import openai
 
-init(name="my-llm-app")  # Optional project name
+init(name="chat-service", mode="prod", project_id="abc12345", session="user_456")
 
-@trace("plan_generation")
+@span(name="llm")
+def call_llm(messages):
+    return {"content": "Mock response", "tool_used": "get_weather"}
+
+@trace(name="multi_agent_chat", session="user_789")
 def main():
-    @span()
-    def call_llm():
-        return openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "Tell me a joke"}]
-        )
-    response = call_llm()
-    print(response.choices[0].message.content)
+    plan = call_llm([{"role": "user", "content": "Weather in Paris?"}])
+    summary = call_llm([{"role": "user", "content": f"Summarize: {plan['content']}"}])
+    print("Final Output:", summary["content"])
 
-if __name__ == "__main__":
-    main()
+main()
 ```
+
+This example shows two @span-wrapped LLM calls under a single @trace. The session metadata ensures everything is tied to the correct user and session in your dashboard.
 
 ## LLM Evaluations
 
