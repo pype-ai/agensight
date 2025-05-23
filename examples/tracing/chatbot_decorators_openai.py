@@ -98,7 +98,7 @@ class Agent:
 
         return choice.message
 
-@trace(name="multi_agent_chat", session={"id": "xyz123", "name": "multi agent chat", "user_id": "123"})
+@trace(name="multi_agent_chat", session={"id": "qwerty123", "name": "multi agent chat", "user_id": "112233"})
 def main():
     planner = Agent("Planner", "Plans things", tools=[weather_tool, news_tool])
     scheduler = Agent("Scheduler", "Schedules plans")

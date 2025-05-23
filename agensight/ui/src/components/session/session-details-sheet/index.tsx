@@ -30,9 +30,14 @@ function SessionDetailsSheet({
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("session-details");
 
-  const handleRunExperimentButton = () => {
-    console.log('hi')
-  }
+  const router = useRouter();
+  // const handleRunExperimentButton = () => {
+  //   if (session?.id) {
+  //     router.push(`/session-replay?session_id=${encodeURIComponent(session.id)}`);
+  //   } else {
+  //     router.push('/session-replay');
+  //   }
+  // }
 
   // Fetch traces for this session (metadata only)
   const {
@@ -89,11 +94,10 @@ function SessionDetailsSheet({
   }
 
   // Handles clicking a trace ID: navigates to the trace details page
-  const router = useRouter();
   const handleTraceIdClick = (traceId: string, trace: any) => {
     // Store session and tab info for restoration
     sessionStorage.setItem('lastSessionId', session?.id ?? '');
-    sessionStorage.setItem('sessionSheetActiveTab', 'terminal-logs');
+    sessionStorage.setItem('sessionSheetActiveTab', 'session-conversation');
     sessionStorage.setItem('sessionSheetSelectedTraceId', traceId);
     sessionStorage.setItem('fromSessionConversation', 'true');
     // Use trace fields or fallback to undefined if not present
@@ -235,7 +239,7 @@ function SessionDetailsSheet({
                   Session Details
                 </TabsTrigger>
                 <TabsTrigger
-                  value="terminal-logs"
+                  value="session-conversation"
                   className={cn(
                     "rounded-none h-full data-[state=active]:bg-transparent data-[state=active]:shadow-none",
                     "border-b-2 border-transparent data-[state=active]:border-white px-4",
@@ -352,7 +356,7 @@ function SessionDetailsSheet({
                 </div>
               </TabsContent>
 
-              <TabsContent value="terminal-logs" className="flex-1 p-0 m-0">
+              <TabsContent value="session-conversation" className="flex-1 p-0 m-0">
                 {/* Fetch all trace details for chat view */}
                 {/* The hook is now at the top of the component */}
                 <div className="bg-slate-900 h-full w-full flex flex-col p-0">
@@ -386,8 +390,8 @@ function SessionDetailsSheet({
                               </div>
                               {/* Output bubble */}
                               <div className="flex">
-                                <div className="bg-slate-700 px-4 py-2 rounded-lg max-w-2xl text-sm font-mono text-right shadow-sm border border-slate-600">
-                                  <span className="block text-slate-400 text-xs mb-1">Output</span>
+                                <div className="bg-slate-700 px-4 py-2 rounded-lg max-w-2xl text-sm font-mono text-left shadow-sm border border-slate-600">
+                                  <span className="block text-slate-400 text-xs mb-1 flex justify-start w-full">Output</span>
                                   <span className="whitespace-pre-line break-words">{trace.trace_output || 'N/A'}</span>
                                 </div>
                               </div>

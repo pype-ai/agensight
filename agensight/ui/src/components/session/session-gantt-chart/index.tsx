@@ -42,6 +42,37 @@ export const SessionGanttChart = ({
 }: SessionGanttChartProps) => {
   const [expandedTraces, setExpandedTraces] = useState<Record<string, boolean>>({})
   const containerRef = useRef<HTMLDivElement>(null)
+  const [showScrollBadge, setShowScrollBadge] = useState(false);
+  const [showGradient, setShowGradient] = useState(false);
+  // Viewport indicator state
+  const [scrollState, setScrollState] = useState({
+    scrollLeft: 0,
+    clientWidth: 0,
+    scrollWidth: 1, // avoid division by zero
+  });
+  // (All drag logic removed)
+
+  useEffect(() => {
+    const checkScroll = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setScrollState({ scrollLeft, scrollWidth, clientWidth });
+      const overflowing = scrollWidth > clientWidth + 2; // fudge factor
+      setShowScrollBadge(overflowing);
+      setShowGradient(overflowing);
+    };
+    checkScroll();
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScroll);
+    }
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      if (container) container.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, []);
 
   // Memoize sorted traces to prevent recalculation on every render
   const sortedTraces = useMemo(() => {
@@ -150,7 +181,6 @@ export const SessionGanttChart = ({
     }))
   }
 
-
   // Generate time markers
   const generateTimeMarkers = () => {
     const markers = []
@@ -168,7 +198,7 @@ export const SessionGanttChart = ({
           style={{ left: `${position * 100}%` }}
         >
           <div className="text-xs text-slate-500 absolute -top-6 -translate-x-1/2">{formatTime(time)}</div>
-        </div>,
+        </div>
       )
     }
 
@@ -204,10 +234,10 @@ export const SessionGanttChart = ({
       {/* Session bar */}
       <div className="px-4 py-2">
         <div className="flex items-center mb-1">
-  <span className="text-xs font-medium">
-    session: {formatDuration(sessionDuration)}
-  </span>
-</div>
+          <span className="text-xs font-medium">
+            session: {formatDuration(sessionDuration)}
+          </span>
+        </div>
         <div className="relative h-8 w-full rounded border border-slate-700 bg-slate-900 mb-4">
           <div
             className="absolute inset-0 rounded"
@@ -216,32 +246,69 @@ export const SessionGanttChart = ({
               borderLeft: `2px solid ${getSpanColor("session")}`,
             }}
           ></div>
+          {/* Viewport indicator overlay */}
+          {scrollState.scrollWidth > scrollState.clientWidth && (
+            <>
+              {/* Left gradient overlay for overflow hint */}
+              <div className="pointer-events-none absolute left-0 top-0 h-full w-6 z-20" style={{ background: 'linear-gradient(to right, rgba(16,23,42,0.18) 60%, transparent 100%)' }} />
+              {/* Right gradient overlay for overflow hint */}
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-6 z-20" style={{ background: 'linear-gradient(to left, rgba(16,23,42,0.18) 60%, transparent 100%)' }} />
+
+              {/* Glassy pill indicator with subtle arrows */}
+              <div
+                className="absolute top-0 bottom-0 border border-white/60 rounded-[8px] z-30 shadow-xl flex items-center justify-between px-1 transition-all duration-200 backdrop-blur-sm"
+                style={{
+                  left: `${(scrollState.scrollLeft / scrollState.scrollWidth) * 100}%`,
+                  width: `${(scrollState.clientWidth / scrollState.scrollWidth) * 100}%`,
+                  minWidth: 28,
+                  background: 'rgba(255,255,255,0.22)',
+                  borderColor: 'rgba(255,255,255,0.38)',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              >
+                {/* Subtle chevrons */}
+                <svg width="10" height="14" viewBox="0 0 10 14" fill="none" className="opacity-50"><path d="M7 2L3 7L7 12" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="10" height="14" viewBox="0 0 10 14" fill="none" className="opacity-50"><path d="M3 2L7 7L3 12" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* Main timeline container */}
-      <div ref={containerRef} className="flex-1 overflow-auto px-4 pb-4 relative">
-        {/* Time markers */}
-        <div className="relative h-full min-h-[500px]">
-          {generateTimeMarkers()}
+      <div className="gantt-chart-scroll w-full overflow-x-auto relative" ref={containerRef}>
+        <div className="gantt-chart-content min-w-full" style={{ minWidth: '1100px', position: 'relative' }}>
+          {/* Scroll gradient indicator */}
+          {showGradient && (
+            <div className="pointer-events-none absolute top-0 right-0 h-full w-10 z-20" style={{ background: 'linear-gradient(to left, rgba(16,23,42,0.35) 55%, transparent 100%)' }} />
+          )}
+          {/* Scroll badge top left */}
+          {/* {showScrollBadge && (
+            <div id="scroll-badge" className="pointer-events-none absolute top-2 left-2 z-40 flex items-center px-2 py-0.5 rounded bg-slate-800/90 text-xs text-slate-300 shadow select-none" style={{fontSize: '11px'}}>
+              <span>⇄ scroll</span>
+            </div>
+          )} */}
 
-          {/* Traces and spans */}
-          <div className="relative z-10">
-            {sortedTraces.map((trace, traceIndex) => {
-              if (!trace.spans?.length) return null
+          {/* Time markers */}
+          <div className="relative h-full min-h-[500px]">
+            {generateTimeMarkers()}
 
-              const traceStart = Math.min(...trace.spans.map((s) => s.start_time))
-              const traceEnd = Math.max(...trace.spans.map((s) => s.end_time))
-              const traceDuration = traceEnd - traceStart
-              const isExpanded = expandedTraces[trace.id] || false
-              const isSelected = trace.id === selectedTraceId
+            {/* Traces and spans */}
+            <div className="relative z-10">
+              {sortedTraces.map((trace, traceIndex) => {
+                if (!trace.spans?.length) return null
 
-              // Calculate position relative to session timeline
-              const traceLeftPos = ((traceStart - sessionStart) / sessionDuration) * 100
-              const traceWidthPos = ((traceEnd - traceStart) / sessionDuration) * 100
+                const traceStart = Math.min(...trace.spans.map((s) => s.start_time))
+                const traceEnd = Math.max(...trace.spans.map((s) => s.end_time))
+                const traceDuration = traceEnd - traceStart
+                const isExpanded = expandedTraces[trace.id] || false
+                const isSelected = trace.id === selectedTraceId
 
-              // Get a name for the trace
-              const traceName = trace.name || `Trace ${traceIndex + 1}`
+                // Calculate position relative to session timeline
+                const traceLeftPos = ((traceStart - sessionStart) / sessionDuration) * 100
+                const traceWidthPos = ((traceEnd - traceStart) / sessionDuration) * 100;
+                const traceName = trace.name || `Trace ${traceIndex + 1}`;
 
               return (
                 <div key={trace.id} className="mb-6">
@@ -249,6 +316,7 @@ export const SessionGanttChart = ({
                   <div
                     className={`flex items-center mb-2 cursor-pointer ${isSelected ? "text-white" : "text-slate-300"}`}
                     onClick={() => onSelectTrace(trace.id)}
+                    onDoubleClick={() => toggleTraceExpansion(trace.id)}
                   >
                     <button
                       className="mr-2 text-slate-400 hover:text-white"
@@ -261,92 +329,71 @@ export const SessionGanttChart = ({
                     </button>
                     <div className="text-xs font-medium">{traceName}</div>
                   </div>
-
-                  {/* Trace timeline */}
-                  <div className="relative h-8 w-full mb-2">
-                    {(!isExpanded ? (
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={`absolute h-full rounded ${isSelected ? "ring-1 ring-white" : ""}`}
-                              style={{
-                                left: `${traceLeftPos}%`,
-                                width: `${Math.max(traceWidthPos, 0.5)}%`,
-                                backgroundColor: getSpanBackgroundColor("agent"),
-                                borderLeft: `2px solid ${getSpanColor("agent")}`,
-                              }}
-                              onClick={() => onSelectTrace(trace.id)}
-                            >
-                              {traceWidthPos > 5 && (
-                                <div className="absolute inset-0 flex items-center px-2 cursor-pointer">
-                                  <span className="text-xs text-white truncate">{traceName}</span>
-                                </div>
-                              )}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="right"
-                            align="center"
-                            className="bg-slate-900 text-white border border-slate-700 shadow-lg"
-                          >
-                            <div className="font-medium">{traceName}</div>
-                            <div className="text-slate-300">Spans: {trace.spans.length}</div>
-                            <div className="text-slate-300">
-                              Duration: {formatDuration(trace.spans.length > 0 ? trace.spans[trace.spans.length - 1].end_time - trace.spans[0].start_time : 0)}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
+                  {/* Trace timeline bar and span row in a relative container */}
+                  {/* Trace timeline bar and span row in a relative container with dynamic height */}
+                  <div
+                    className="relative w-full mb-2"
+                    style={{
+                      height: isExpanded ? `calc(40px + ${Math.max(trace.spans.length, 1) * 28}px)` : '40px',
+                    }}
+                  >
+                    {/* Trace bar */}
+                    <div
+                      className={`absolute h-8 rounded gantt-span-box ${isSelected ? "ring-1 ring-white" : ""}`}
+                      style={{
+                        left: `${traceLeftPos}%`,
+                        width: `${Math.max(traceWidthPos, 0.5)}%`,
+                        minWidth: '100px',
+                        backgroundColor: getSpanBackgroundColor("agent"),
+                        borderLeft: `2px solid ${getSpanColor("agent")}`,
+                        top: 0,
+                      }}
+                      onClick={() => onSelectTrace(trace.id)}
+                      onDoubleClick={() => toggleTraceExpansion(trace.id)}
+                    >
+                      {traceWidthPos > 5 && (
+                        <div className="absolute inset-0 flex items-center px-2 cursor-pointer">
+                          <span className="text-xs text-white truncate">{traceName}: {formatDuration(trace.spans.length > 0 ? trace.spans[trace.spans.length - 1].end_time - trace.spans[0].start_time : 0)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Span row absolutely positioned under the trace bar */}
+                    {isExpanded && (
                       <div
-                        className={`absolute h-full rounded ${isSelected ? "ring-1 ring-white" : ""}`}
+                        className="flex flex-col gap-1 mb-2"
                         style={{
+                          position: 'absolute',
                           left: `${traceLeftPos}%`,
                           width: `${Math.max(traceWidthPos, 0.5)}%`,
-                          backgroundColor: getSpanBackgroundColor("agent"),
-                          borderLeft: `2px solid ${getSpanColor("agent")}`,
+                          minWidth: '100px',
+                          top: '40px', // directly below the bar
                         }}
-                        onClick={() => onSelectTrace(trace.id)}
                       >
-                        {traceWidthPos > 5 && (
-                          <div className="absolute inset-0 flex items-center px-2 cursor-pointer">
-                            <span className="text-xs text-white truncate">
-                              {traceName}: {formatDuration(trace.spans.length > 0 ? trace.spans[trace.spans.length - 1].end_time - trace.spans[0].start_time : 0)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Span rows (only show if trace is expanded) */}
-                  {isExpanded && (
-                    <div className="pl-6 border-l border-slate-800">
-                      {trace.spans.map((span) => {
-                        const spanLeftPos = ((span.start_time - sessionStart) / sessionDuration) * 100
-                        const spanWidthPos = ((span.end_time - span.start_time) / sessionDuration) * 100
-                        const isSelectedSpan = span.span_id === selectedSpanId
-                        return (
-                          <div key={span.span_id} className="relative h-8 mb-1">
-                            <TooltipProvider delayDuration={0}>
+                        {trace.spans.map((span) => {
+                          const spanStart = Math.min(...trace.spans.map((s) => s.start_time));
+                          const spanEnd = Math.max(...trace.spans.map((s) => s.end_time));
+                          const spanDuration = spanEnd - spanStart || 1;
+                          const spanLeft = ((span.start_time - spanStart) / spanDuration) * 100;
+                          const spanWidth = ((span.end_time - span.start_time) / spanDuration) * 100;
+                          const isSelectedSpan = span.span_id === selectedSpanId;
+                          return (
+                            <TooltipProvider key={span.span_id} delayDuration={0}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                    className={`absolute h-full rounded cursor-pointer ${isSelectedSpan ? "ring-1 ring-white" : ""}`}
+                                    className={`relative h-6 rounded cursor-pointer gantt-span-box ${isSelectedSpan ? "ring-1 ring-white" : ""}`}
                                     style={{
-                                      left: `${spanLeftPos}%`,
-                                      width: `${Math.max(spanWidthPos, 0.5)}%`,
+                                      marginLeft: `${spanLeft}%`,
+                                      width: `${Math.max(spanWidth, 0.5)}%`,
+                                      minWidth: '36px',
                                       backgroundColor: getSpanBackgroundColor(span.type),
                                       borderLeft: `2px solid ${getSpanColor(span.type)}`,
                                     }}
                                     onClick={() => onSelectSpan(span.span_id, trace.id)}
                                   >
-                                    {spanWidthPos > 5 && (
-                                      <div className="absolute inset-0 flex items-center px-2">
-                                        <span className="text-xs text-white truncate">{span.name}</span>
-                                      </div>
-                                    )}
+                                    <div className="flex items-center h-full px-2">
+                                      <span className="text-xs text-white truncate">{span.name}</span>
+                                    </div>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent
@@ -360,28 +407,27 @@ export const SessionGanttChart = ({
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          </div>
-                        )
-                      })}
-
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
         </div>
       </div>
-
-      {/* Time scale at bottom */}
-      <div className="px-4 py-2 border-t border-slate-800 flex justify-between text-xs text-slate-400">
-        <span>{formatTime(sessionStart)}</span>
-        <span>{formatDuration(sessionDuration)}</span>
-        <span>{formatTime(sessionEnd)}</span>
-      </div>
-
     </div>
-  )
+
+    {/* Time scale at bottom */}
+    <div className="px-4 py-2 border-t border-slate-800 flex justify-between text-xs text-slate-400">
+      <span>{formatTime(sessionStart)}</span>
+      <span>{formatDuration(sessionDuration)}</span>
+      <span>{formatTime(sessionEnd)}</span>
+    </div>
+  </div>
+);
 }
 
 export default SessionGanttChart
