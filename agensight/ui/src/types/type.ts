@@ -43,6 +43,9 @@ export interface Span {
   start_time: number;
   tools_called: ToolCall[];
   details?: SpanDetails; // Optional details that will be loaded when a span is selected
+  trace?: any; // Optional trace object that this span belongs to
+  input?: string;
+  output?: string;
 }
 
 export interface TraceDetailPageProps {

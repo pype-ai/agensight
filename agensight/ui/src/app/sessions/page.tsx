@@ -1,11 +1,18 @@
 "use client"
 
-import { getAllSessions } from '@/lib/services/traces';
+import { getAllSessions, getSingleSessionTraces, getSpans } from '@/lib/services/traces';
 import { useQuery } from '@tanstack/react-query';
-import React from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react'
 import { ReactTable } from '@/components/ReactTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { IconInfoCircle } from '@tabler/icons-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { GanttChartVisualizer } from '@/components/GannChart';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import SessionDetailsSheet from '@/components/session/session-details-sheet';
 
 function Sessions() {
   const {
@@ -23,42 +30,56 @@ function Sessions() {
   const pageSize = 10;
   const totalRows = sessionsData?.length || 0;
   const totalPages = Math.ceil(totalRows / pageSize);
+  const [selectedSession, setSelectedSession] = React.useState<any | null>(null);
+  const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  const handleRowClick = (row: any) => {
-    const { id, session_name, user_id } = row.original;
-    const params = new URLSearchParams({
-      sessionId: id,
-      session_name: session_name || '',
-      user_id: user_id || '',
-    });
-    router.push(`/sessions/session?${params.toString()}`);
-  };
+  const columns: ColumnDef<any>[] = useMemo(() => [
+  {
+    accessorKey: 'session_name',
+    header: 'Session Name',
+    cell: ({ getValue }) => getValue() || <span className="italic text-gray-400">-</span>,
+  },
+  {
+    accessorKey: 'id',
+    header: 'Session ID',
+    cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as string}</span>,
+  },
+  {
+    accessorKey: 'started_at',
+    header: 'Started At',
+    cell: ({ getValue }) => {
+      const value = getValue();
+      return value ? new Date(Number(value) * 1000).toLocaleString() : '-';
+    },
+  },
+  {
+    accessorKey: 'user_id',
+    header: 'User ID',
+    cell: ({ getValue }) => getValue() || <span className="italic text-gray-400">-</span>,
+  },
+], []);
 
-  console.log({ sessionsData });
-
-  const columns: ColumnDef<any>[] = [
+  // Metrics placeholder data
+  const metrics = [
     {
-      accessorKey: 'session_name',
-      header: 'Session Name',
-      cell: ({ getValue }) => getValue() || <span className="italic text-gray-400">-</span>,
+      label: 'Total Cost',
+      value: '-',
+      tooltip: 'Total cost incurred for this period (placeholder).',
     },
     {
-      accessorKey: 'id',
-      header: 'Session ID',
-      cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as string}</span>,
+      label: 'Tokens Generated',
+      value: '-',
+      tooltip: 'Total number of tokens generated (placeholder).',
     },
     {
-      accessorKey: 'started_at',
-      header: 'Started At',
-      cell: ({ getValue }) => {
-        const value = getValue();
-        return value ? new Date(Number(value) * 1000).toLocaleString() : '-';
-      },
+      label: 'Fail Rate',
+      value: '-',
+      tooltip: 'Percentage of failed events (placeholder).',
     },
     {
-      accessorKey: 'user_id',
-      header: 'User ID',
-      cell: ({ getValue }) => getValue() || <span className="italic text-gray-400">-</span>,
+      label: 'Total Events',
+      value: '-',
+      tooltip: 'Total number of events in this period (placeholder).',
     },
   ];
 
@@ -73,15 +94,47 @@ function Sessions() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Sessions</h1>
+      {/* Metrics summary row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {metrics.map((metric, idx) => (
+          <div
+            key={metric.label}
+            className="flex items-center gap-2 bg-muted rounded-lg px-4 py-3"
+          >
+            <span className="font-medium text-sm">{metric.label}</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="ml-1 cursor-help">
+                    <IconInfoCircle
+                      size={16}
+                      className="text-muted-foreground"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{metric.tooltip}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="ml-auto font-mono text-base">{metric.value}</span>
+          </div>
+        ))}
+      </div>
       <ReactTable
         columns={columns}
         data={sessionsData || []}
-        onRowClick={handleRowClick}
-        page={page}
-        pageSize={pageSize}
+        onRowClick={(row) => {
+          setSelectedSession(row);
+          setSheetOpen(true);
+        }}
+      />
+      {/* Sidesheet for session details */}
+      <SessionDetailsSheet
+        session={selectedSession}
+        sheetOpen={sheetOpen}
+        setSheetOpen={setSheetOpen}
       />
     </div>
-  )
+  );
 }
 
 export default Sessions

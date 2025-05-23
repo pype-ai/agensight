@@ -48,11 +48,11 @@ const navigationItems = [
         icon: List,
         href: '/sessions',
       },
-      {
-        label: 'Traces',
-        icon: FileText,
-        href: '/traces',
-      },
+      // {
+      //   label: 'Traces',
+      //   icon: FileText,
+      //   href: '/traces',
+      // },
     ],
   },
   // if needed add more menu items
@@ -111,6 +111,27 @@ export function AppSidebar() {
 
     // If the item has children, render a collapsible menu
     if (item.children) {
+      // Custom click handler for Traces (or any menu with children)
+      const handleParentMenuClick = (e: React.MouseEvent) => {
+        // Only handle Traces for now, but you can generalize if needed
+        if (item.label === 'Traces') {
+          if (!open) {
+            // Open sidebar and expand Traces
+            toggleSidebar();
+            setTimeout(() => {
+              setOpenMenus((prev: any) => ({ ...prev, [item.label]: true }));
+            }, 250); // Wait for sidebar animation
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+        }
+        // If sidebar is open, just toggle the dropdown
+        toggleMenu(item.label);
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
       return (
         <Collapsible
           key={item.label}
@@ -120,7 +141,10 @@ export function AppSidebar() {
         >
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
-              <SidebarMenuButton className="gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full">
+              <SidebarMenuButton
+                className="gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full"
+                onClick={handleParentMenuClick}
+              >
                 <IconComponent className={cn('w-5 h-5', !open && 'mx-auto')} />
                 {open && (
                   <>

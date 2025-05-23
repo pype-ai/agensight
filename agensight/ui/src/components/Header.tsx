@@ -21,12 +21,12 @@ export function Header({ darkMode, toggleDarkMode, children }: HeaderProps) {
     >
       <div className="pr-6 pl-3 flex h-14 justify-between w-full items-center">
         <div className="flex items-center gap-3">
-          <TooltipProvider>
+          {/* <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span>
+                <span> */}
                   <SidebarTrigger />
-                </span>
+                {/* </span>
               </TooltipTrigger>
               <TooltipContent side="right" align="center">
                 <span className="flex items-center gap-2 text-xs">
@@ -36,7 +36,7 @@ export function Header({ darkMode, toggleDarkMode, children }: HeaderProps) {
                 </span>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </TooltipProvider> */}
           <div className="flex items-center gap-4">
             
             {children}
