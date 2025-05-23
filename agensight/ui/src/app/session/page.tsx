@@ -410,7 +410,6 @@ function EmptyState() {
   );
 }
 
-
 export default function Session() {
   return (
     <Suspense fallback={<div>Loading session...</div>}>

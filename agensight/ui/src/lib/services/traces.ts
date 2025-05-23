@@ -166,3 +166,22 @@ export async function getSpans(
     throw error;
   }
 }
+
+export async function getSpanDetails(
+  spanId: string
+): Promise<any[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/span/${spanId}/details`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error fetching spans: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch spans:', error);
+    throw error;
+  }
+}

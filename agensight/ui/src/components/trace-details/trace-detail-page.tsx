@@ -27,6 +27,7 @@ import { SpanDetailsContainer } from "./index";
 import { useSidebar } from "../ui/sidebar";
 import { Header } from "../Header";
 import { useTheme } from "../ThemeProvider";
+import { useSearchParams } from "next/navigation";
 
 // Custom hook to prevent scroll propagation
 function usePreventScrollPropagation() {
@@ -65,6 +66,8 @@ function TraceDetailPage({ id, name, latency, router, total_tokens }: TraceDetai
   const [selectedGanttSpan, setSelectedGanttSpan] = useState<Span | null>(null);
   const { darkMode, toggleDarkMode } = useTheme();
   const { open } = useSidebar();
+
+  const redirectFromSession = useSearchParams().get('redirect_from_session') === 'true';
 
   // Add a global message handler for iframe resizing
   useEffect(() => {
@@ -224,7 +227,12 @@ function TraceDetailPage({ id, name, latency, router, total_tokens }: TraceDetai
         // This will be read by the dashboard page component to set active tab
         sessionStorage.setItem('dashboardActiveTab', 'traces');
         // Navigate to the dashboard page
-        router.push("/");
+        if (redirectFromSession) {
+          router.back();
+        } else {
+          router.push("/");
+
+        }
       }}
     >
       <IconArrowLeft size={16} />

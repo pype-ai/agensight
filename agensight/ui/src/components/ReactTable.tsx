@@ -10,7 +10,7 @@ import {
 interface ReactTableProps<TData extends object> {
   columns: ColumnDef<TData, any>[];
   data: TData[];
-  onRowClick?: (row: Row<TData>) => void;
+  onRowClick?: (rowData: TData) => void;
   className?: string;
   page?: number;
   pageSize?: number;
@@ -26,17 +26,19 @@ export function ReactTable<TData extends object>({
   pageSize,
   onPaginationChange,
 }: ReactTableProps<TData>) {
-  // If external pagination is provided, slice the data
+  const safeData = Array.isArray(data) ? data : [];
+
   const paginatedData =
     typeof page === 'number' && typeof pageSize === 'number'
-      ? data.slice(page * pageSize, (page + 1) * pageSize)
-      : data;
+      ? safeData.slice(page * pageSize, (page + 1) * pageSize)
+      : safeData;
 
   const table = useReactTable({
     data: paginatedData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
 
   return (
     <div className={`overflow-x-auto ${className}`}>
@@ -58,7 +60,7 @@ export function ReactTable<TData extends object>({
               <tr
                 key={row.id}
                 className="border-t border-muted dark:border-gray-700 hover:bg-primary/5 even:bg-muted/30 cursor-pointer"
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onClick={() => onRowClick?.(row.original)}
               >
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id} className="px-4 py-2 text-gray-900 dark:text-gray-100">

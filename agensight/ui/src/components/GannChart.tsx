@@ -378,6 +378,8 @@ export function GanttChart({ spans, trace }: GanttChartProps) {
   export function GanttChartVisualizer({ spans, trace, onSelectSpan, onSelectTool, selectedSpanId }: GanttChartVisualizerProps) {
     const [focusedSpanIndex, setFocusedSpanIndex] = useState<number>(-1);
     
+    console.log({spans, trace, onSelectSpan, onSelectTool, selectedSpanId})
+
     // Handle keyboard navigation
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -495,7 +497,7 @@ export function GanttChart({ spans, trace }: GanttChartProps) {
     const agentSpans = spans.filter(span => !userSpans.includes(span));
     
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full w-full flex flex-col">
         {/* Time axis */}
         <div className="flex justify-between mb-1 text-xs text-muted-foreground sticky top-0 bg-background z-10 pb-0.5" suppressHydrationWarning>
           {timelineData.timeMarks.map((mark, i) => (
