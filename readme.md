@@ -81,23 +81,82 @@ All data is stored locally inside the SDK, ensuring complete privacy and control
 
 ## Quick Start
 
-Requires Python ≥3.10
+### Basic Setup
 
+1. **Install Agensight**
 ```bash
 # Create and activate a virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install package
+# Install the latest version
 pip install agensight
-agensight view 
 ```
 
-Your dashboard will open at localhost:5001.
+2. **Start the Dashboard**
+```bash
+# Launch the Agensight dashboard
+agensight view
+```
+Visit http://localhost:5001 in your browser
+
+### Setup Tracing
+
+1. **Add to your Python code**
+```python
+from agensight import init, trace, span
+
+# Initialize Agensight
+init(name="my-agent")
+
+# Add tracing to your functions
+@trace("my_workflow")
+def my_function():
+    @span()
+    def my_subtask():
+        # Your code here
+        pass
+    return my_subtask()
+```
+
+### Setup Playground
+
+1. **Install MCP Server**
+```bash
+# Clone the MCP server
+git clone https://github.com/pype-ai/agensight_mcpserver.git
+cd agensight_mcpserver
+
+# Setup MCP server
+python -m venv mcp-env
+source mcp-env/bin/activate  # On Windows: mcp-env\Scripts\activate
+pip install -r requirements.txt
+```
+
+2. **Configure Cursor/Windsurf**
+Add this to your Cursor/Windsurf settings:
+```json
+{
+  "mcpServers": {
+    "agensight": {
+      "command": "/path/to/agensight_mcpserver/mcp-env/bin/python",
+      "args": ["/path/to/agensight_mcpserver/server.py"],
+      "description": "Agensight Playground Generator"
+    }
+  }
+}
+```
+
+3. **Generate Playground**
+- Open your project in Cursor/Windsurf
+- Type in chat: "Please analyze this codebase using the generateAgensightConfig MCP tool"
+- Your config will be automatically generated
+
+That's it! You now have both tracing and playground features set up. The dashboard at http://localhost:5001 will show your traces and allow you to edit your agents in the playground.
 
 
 
-## Agent Observability Setup
+## Agent Observability
 
 <A line about traces and spans>
 <A picture of the session view>
@@ -161,45 +220,67 @@ Agensight offers a variety of evaluation metrics tailored to different use cases
 
 
 
-## Playground Setup
+## Playground
 
-To set up the agent playground, we provide an MCP server that, when integrated with Cursor or Windsurf, visually maps your agent workflows. It explores your codebase using Cursor or Windsurf and generates an editable agent workflow configuration (JSON file). You can then visualize your agent workflows in the studio by simply running `agensight view` in your terminal.
+Once your playground is generated, you'll have access to these features:
 
-```bash
-# One time setup for agensight MCP
-# Clone the repository
-git clone https://github.com/pype-ai/agensight_mcpserver.git
-cd agensight_mcpserver
+1. **Agent Configuration**
+   - Edit agent prompts and system messages
+   - Configure model parameters (temperature, max tokens, etc.)
+   - Set up tools and function calls
+   - Define agent variables and connections
 
-# Create a virtual environment
-python -m venv mcp-env
-source mcp-env/bin/activate  # On Windows: mcp-env\Scripts\activate
+2. **Workflow Visualization**
+   - View your agent workflow as a visual graph
+   - Drag and drop to modify agent connections
+   - Add or remove agents from the workflow
+   - Configure input/output relationships
 
-# Install dependencies
-pip install requirements.txt
-```
+3. **Prompt Management**
+   - Create and edit prompts in real-time
+   - Save different versions of prompts
+   - Test prompts with sample inputs
+   - Compare prompt performance
 
-### MCP Server Configuration (for Claude/Cursor)
+4. **Tool Configuration**
+   - Add or modify tools for your agents
+   - Configure tool parameters
+   - Test tool functionality
+   - Monitor tool usage and performance
 
+Example playground configuration:
 ```json
 {
-  "mcpServers": {
-    "sqlite-server": {
-      "command": "/path/to/agensight_mcpserver/mcp-env/bin/python",
-      "args": [
-        "/path/to/agensight_mcpserver/server.py"
-      ],
-      "description": "tool to generate agensight config"
+  "agents": [
+    {
+      "name": "ResearchAgent",
+      "prompt": "You are a research assistant...",
+      "modelParams": {
+        "model": "gpt-4",
+        "temperature": 0.7
+      },
+      "tools": ["web_search", "document_reader"]
+    },
+    {
+      "name": "SummaryAgent",
+      "prompt": "Summarize the following information...",
+      "modelParams": {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0.3
+      }
     }
-  }
+  ],
+  "connections": [
+    {"from": "ResearchAgent", "to": "SummaryAgent"}
+  ]
 }
 ```
 
-In your Cursor chatbot, enter:
-
-```
-Please analyze this codebase using the generateAgensightConfig MCP tool
-```
+All changes made in the playground automatically sync with your codebase, allowing you to:
+- Test changes before committing them
+- Version control your agent configurations
+- Collaborate with team members
+- Maintain consistency across environments
 
 ## Configuration
 
