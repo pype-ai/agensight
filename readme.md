@@ -5,7 +5,7 @@
    <div>
       <h3>
          <a href="https://app.pypeai.com/">
-            <strong>Cloud</strong>
+            <strong>Cloud</strong> 
          </a> · 
          <a href="https://www.youtube.com/watch?v=eunL3IFSIB8">
             <strong>Demo</strong>
@@ -59,21 +59,25 @@ Pype AI's Agensight is an open-source experimentation studio built for conversat
 
 
 
-## Features
+## Core Features
+![3](https://github.com/user-attachments/assets/58352598-4fb8-4477-a71c-e76b27dd632c)
 
-- Auto-instrumented tracing for LLM calls
-- Local development mode for offline trace inspection
-- Customizable trace and span naming
-- Token usage tracking
-- Experimental prompt playground
-- Maintain the prompt versions
 
-## Security & Local Storage
+#### Agent Observability 
+Agensight provides comprehensive observability for your AI agents through auto-instrumented tracing of all LLM calls, function executions, and agent interactions. The local development mode enables offline trace inspection with detailed performance metrics and token usage analytics. Customize your traces and spans with meaningful names and organize them for better debugging and analysis of your agent workflows.
 
-- All data stored locally inside the SDK
-- No data uploaded or tracked externally
-- Prompts versions stored locally in `.agensight` file
-- Recommended: Run in isolated virtual environments
+#### Interactive Playground
+The interactive playground offers a visual workflow editor for designing and modifying agent workflows through an intuitive interface. All changes made in the playground automatically sync with your codebase, ensuring seamless integration between development and experimentation. The platform maintains version control for your prompts and agent configurations, allowing you to track and revert changes as needed.
+
+#### LLM Evaluations
+Evaluate your agent's performance with custom metrics tailored to your specific use cases. Agensight's evaluation framework provides automated scoring of agent responses using predefined or custom criteria, giving you instant feedback on performance. Track improvements over time with detailed evaluation reports and analytics, helping you continuously enhance your agent's capabilities.
+
+#### Conversational Replay
+Access and replay any past conversation with your agents through the session history feature. Compare different versions of your agents (model, prompt, tools) side by side to identify improvements and regressions. The interactive debugging capabilities allow you to step through conversations, making it easier to identify and fix issues in your agent's behavior.
+
+#### Security & Local Storage
+All data is stored locally inside the SDK, ensuring complete privacy and control over your information. No data is uploaded or tracked externally, and all prompt versions are stored locally in the `.agensight` file. We recommend running Agensight in isolated virtual environments for enhanced security.
+
 
 ## Quick Start
 
