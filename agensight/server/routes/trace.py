@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from typing import Dict, List, Optional, Any
 from flask import Blueprint, jsonify, request
+from opentelemetry.trace import SpanKind
 
 from agensight.tracing.db import get_db
 from agensight.tracing.utils import transform_trace_to_agent_view
@@ -71,38 +72,94 @@ def list_traces():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s [%(name)s] %(message)s"
+)
+
 @trace_router.get("/span/{span_id}/details")
 def get_span_details(span_id: str):
     try:
         conn = get_db()
-        prompts = conn.execute("SELECT * FROM prompts WHERE span_id = ? ORDER BY message_index", (span_id,)).fetchall()
+
+        # Get the current span with rowid
+        span_row = conn.execute("SELECT rowid, * FROM spans WHERE id = ?", (span_id,)).fetchone()
+        if not span_row:
+            raise HTTPException(status_code=404, detail="Span not found")
+
+        span = dict(span_row)
+        rowid = span["rowid"]
+        span_kind = span.get("kind")
+
+        # Fetch current span data
+        prompts = conn.execute("SELECT * FROM prompts WHERE span_id = ?", (span_id,)).fetchall()
         completions = conn.execute("SELECT * FROM completions WHERE span_id = ?", (span_id,)).fetchall()
         tools = conn.execute("SELECT * FROM tools WHERE span_id = ?", (span_id,)).fetchall()
+
+        if span_kind == str(SpanKind.INTERNAL):
+            prev_span_row = conn.execute("SELECT * FROM spans WHERE rowid = ?", (rowid - 1,)).fetchone()
+            if prev_span_row:
+                prev_span = dict(prev_span_row)
+                prev_span_id = prev_span["id"]
+
+                prev_prompts = conn.execute("SELECT * FROM prompts WHERE span_id = ?", (prev_span_id,)).fetchall()
+                prev_completions = conn.execute("SELECT * FROM completions WHERE span_id = ?", (prev_span_id,)).fetchall()
+                prev_tools = conn.execute("SELECT * FROM tools WHERE span_id = ?", (prev_span_id,)).fetchall()
+
+
+                if prev_prompts or prev_completions or prev_tools:
+                    prompts = prev_prompts or prompts
+                    completions = prev_completions or completions
+                    tools = prev_tools or tools
+
 
         return {
             "prompts": [dict(p) for p in prompts],
             "completions": [dict(c) for c in completions],
             "tools": [dict(t) for t in tools]
         }
-    except sqlite3.DatabaseError as e:
+
+    except sqlite3.DatabaseError as e:     
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 @trace_router.get("/traces/{trace_id}/spans")
 def get_structured_trace(trace_id: str):
     try:
         conn = get_db()
-        spans = conn.execute("SELECT * FROM spans WHERE trace_id = ? ORDER BY started_at", (trace_id,)).fetchall()
+        spans = conn.execute("SELECT rowid, * FROM spans WHERE trace_id = ? ORDER BY started_at", (trace_id,)).fetchall()
         spans = [dict(s) for s in spans]
 
         span_details_by_id = {}
-        for span in spans:
-            span_id = span["id"]
-            prompts = conn.execute("SELECT * FROM prompts WHERE span_id = ?", (span_id,)).fetchall()
-            completions = conn.execute("SELECT * FROM completions WHERE span_id = ?", (span_id,)).fetchall()
-            tools = conn.execute("SELECT * FROM tools WHERE span_id = ?", (span_id,)).fetchall()
+        span_id_replacements = {}
 
-            span_details_by_id[span_id] = {
+        for idx, span in enumerate(spans):
+            original_span_id = span["id"]
+            rowid = span["rowid"]
+            kind = span.get("kind")
+
+            # Walk backward if INTERNAL to find the closest previous span with data
+            if kind == str(SpanKind.INTERNAL):
+                logger.info(f"🔁 INTERNAL span → Checking previous row for span ID {original_span_id}")
+                prev_span_row = conn.execute("SELECT * FROM spans WHERE rowid < ? ORDER BY rowid DESC LIMIT 1", (rowid,)).fetchone()
+                if prev_span_row:
+                    prev_span_id = prev_span_row["id"]
+                    logger.info(f"   ↪ Replacing span ID {original_span_id} with previous span ID {prev_span_id}")
+                    span_id_replacements[original_span_id] = prev_span_id
+
+        for span in spans:
+            effective_span_id = span_id_replacements.get(span["id"], span["id"])
+            prompts = conn.execute("SELECT * FROM prompts WHERE span_id = ?", (effective_span_id,)).fetchall()
+            completions = conn.execute("SELECT * FROM completions WHERE span_id = ?", (effective_span_id,)).fetchall()
+            tools = conn.execute("SELECT * FROM tools WHERE span_id = ?", (effective_span_id,)).fetchall()
+
+            span_details_by_id[span["id"]] = {
                 "prompts": [dict(p) for p in prompts],
                 "completions": [dict(c) for c in completions],
                 "tools": [dict(t) for t in tools],
@@ -110,5 +167,17 @@ def get_structured_trace(trace_id: str):
 
         structured = transform_trace_to_agent_view(spans, span_details_by_id)
         return JSONResponse(content=structured)
+
+    except sqlite3.DatabaseError as e:
+        logger.error(f"❌ SQLite error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.exception(f"❌ Unexpected error in get_structured_trace")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
     except sqlite3.DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e))
