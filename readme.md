@@ -1,6 +1,5 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+![Screenshot 2025-05-23 at 3 38 12 PM](https://github.com/user-attachments/assets/62fcd28d-0f65-4557-af6e-afb9fbd80960)
 
-![Langfuse GitHub Banner](https://langfuse.com/images/docs/github-readme/github-banner.png)
 
 <div align="center">
    <div>
@@ -23,30 +22,21 @@
 </div>
 
 <p align="center">
-   <a href="https://github.com/langfuse/langfuse/blob/main/LICENSE">
+   <a href="https://github.com/pype-ai/agensight/blob/update-readme/LICENSE">
    <img src="https://img.shields.io/badge/License-MIT-E11311.svg" alt="MIT License">
    </a>
-   <a href="https://www.ycombinator.com/companies/langfuse"><img src="https://img.shields.io/badge/Y%20Combinator-W23-orange" alt="Y Combinator W23"></a>
-   <a href="https://hub.docker.com/u/langfuse" target="_blank">
-   <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/langfuse/langfuse?labelColor=%20%23FDB062&logo=Docker&labelColor=%20%23528bff"></a>
-   <a href="https://pypi.python.org/pypi/langfuse"><img src="https://img.shields.io/pypi/dm/langfuse?logo=python&logoColor=white&label=pypi%20langfuse&color=blue" alt="langfuse Python package on PyPi"></a>
-   <a href="https://www.npmjs.com/package/langfuse"><img src="https://img.shields.io/npm/dm/langfuse?logo=npm&logoColor=white&label=npm%20langfuse&color=blue" alt="langfuse npm package"></a>
-   <br/>
-   <a href="https://discord.com/invite/7NXusRtqYU" target="_blank">
-   <img src="https://img.shields.io/discord/1111061815649124414?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb"
-      alt="chat on Discord"></a>
-   <a href="https://twitter.com/intent/follow?screen_name=langfuse" target="_blank">
-   <img src="https://img.shields.io/twitter/follow/langfuse?logo=X&color=%20%23f5f5f5"
-      alt="follow on X(Twitter)"></a>
-   <a href="https://www.linkedin.com/company/langfuse/" target="_blank">
+   <a href="https://pypi.org/project/agensight/0.4.8/">
+      <img alt="PyPI Downloads" src="https://img.shields.io/pypi/dm/agensight?logo=python&logoColor=white&label=pypi%20agensight&color=blue">
+   </a>
+   <a href="https://www.linkedin.com/company/pype-ai/posts/?feedView=all" target="_blank">
    <img src="https://custom-icon-badges.demolab.com/badge/LinkedIn-0A66C2?logo=linkedin-white&logoColor=fff"
       alt="follow on LinkedIn"></a>
-   <a href="https://github.com/langfuse/langfuse/graphs/commit-activity" target="_blank">
-   <img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/langfuse/langfuse?labelColor=%20%2332b583&color=%20%2312b76a"></a>
-   <a href="https://github.com/langfuse/langfuse/" target="_blank">
-   <img alt="Issues closed" src="https://img.shields.io/github/issues-search?query=repo%3Alangfuse%2Flangfuse%20is%3Aclosed&label=issues%20closed&labelColor=%20%237d89b0&color=%20%235d6b98"></a>
-   <a href="https://github.com/langfuse/langfuse/discussions/" target="_blank">
-   <img alt="Discussion posts" src="https://img.shields.io/github/discussions/langfuse/langfuse?labelColor=%20%239b8afb&color=%20%237a5af8"></a>
+   <a href="https://github.com/pype-ai/agensight/graphs/commit-activity" target="_blank">
+     <img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/pype-ai/agensight?labelColor=%2332b583&color=%2312b76a">
+   </a>
+   <a href="https://github.com/pype-ai/agensight/issues?q=is%3Aissue%20state%3Aclosed" target="_blank">
+      <img alt="Issues closed" src="https://img.shields.io/github/issues-search?query=repo%3Apype-ai%2Fagensight%20is%3Aclosed&label=issues%20closed&labelColor=%237d89b0&color=%235d6b98">
+   </a>
 </p>
 
 
