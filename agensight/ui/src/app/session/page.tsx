@@ -15,8 +15,7 @@ import {
 } from '@/components/ui/collapsible';
 import Link from 'next/link';
 
-
-function Session() {
+function SessionContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('sessionId');
 
@@ -411,12 +410,10 @@ function EmptyState() {
   );
 }
 
-
-
-export default function SessionPageWrapper() {
-    return (
-        <Suspense fallback={<div>Loading session...</div>}>
-            <Session />
-        </Suspense>
-    )
+export default function Session() {
+  return (
+    <Suspense fallback={<div>Loading session...</div>}>
+      <SessionContent />
+    </Suspense>
+  );
 }

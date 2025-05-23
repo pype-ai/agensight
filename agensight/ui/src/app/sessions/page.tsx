@@ -1,12 +1,21 @@
-"use client"
+'use client';
 
-import { getAllSessions, getSingleSessionTraces, getSpans } from '@/lib/services/traces';
+import {
+  getAllSessions,
+  getSingleSessionTraces,
+  getSpans,
+} from '@/lib/services/traces';
 import { useQuery } from '@tanstack/react-query';
-import React, { useCallback, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { ReactTable } from '@/components/ReactTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { GanttChartVisualizer } from '@/components/GannChart';
@@ -14,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import SessionDetailsSheet from '@/components/session/session-details-sheet';
 
-function Sessions() {
+export default function Sessions() {
   const {
     data: sessionsData,
     isLoading: sessionsLoading,
@@ -30,34 +39,43 @@ function Sessions() {
   const pageSize = 10;
   const totalRows = sessionsData?.length || 0;
   const totalPages = Math.ceil(totalRows / pageSize);
-  const [selectedSession, setSelectedSession] = React.useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = React.useState<any | null>(
+    null
+  );
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  const columns: ColumnDef<any>[] = useMemo(() => [
-  {
-    accessorKey: 'session_name',
-    header: 'Session Name',
-    cell: ({ getValue }) => getValue() || <span className="italic text-gray-400">-</span>,
-  },
-  {
-    accessorKey: 'id',
-    header: 'Session ID',
-    cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as string}</span>,
-  },
-  {
-    accessorKey: 'started_at',
-    header: 'Started At',
-    cell: ({ getValue }) => {
-      const value = getValue();
-      return value ? new Date(Number(value) * 1000).toLocaleString() : '-';
-    },
-  },
-  {
-    accessorKey: 'user_id',
-    header: 'User ID',
-    cell: ({ getValue }) => getValue() || <span className="italic text-gray-400">-</span>,
-  },
-], []);
+  const columns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'session_name',
+        header: 'Session Name',
+        cell: ({ getValue }) =>
+          getValue() || <span className="italic text-gray-400">-</span>,
+      },
+      {
+        accessorKey: 'id',
+        header: 'Session ID',
+        cell: ({ getValue }) => (
+          <span className="font-mono text-xs">{getValue() as string}</span>
+        ),
+      },
+      {
+        accessorKey: 'started_at',
+        header: 'Started At',
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value ? new Date(Number(value) * 1000).toLocaleString() : '-';
+        },
+      },
+      {
+        accessorKey: 'user_id',
+        header: 'User ID',
+        cell: ({ getValue }) =>
+          getValue() || <span className="italic text-gray-400">-</span>,
+      },
+    ],
+    []
+  );
 
   // Metrics placeholder data
   const metrics = [
@@ -86,7 +104,9 @@ function Sessions() {
   if (sessionsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-lg text-muted-foreground">Loading sessions...</span>
+        <span className="text-lg text-muted-foreground">
+          Loading sessions...
+        </span>
       </div>
     );
   }
@@ -136,5 +156,3 @@ function Sessions() {
     </div>
   );
 }
-
-export default Sessions

@@ -1,154 +1,363 @@
-from typing import List, Optional, Tuple, Union, Dict, Any
-import re
-import os
-from openai import OpenAI
+"""LLM evaluated metric based on the GEval framework: https://arxiv.org/pdf/2303.16634.pdf"""
 
-from ..base import BaseMetric
-from ..test_case import ModelTestCase, ModelTestCaseParams, ToolExecution
-from .template import ResponseEvalTemplate
-from .utils import validate_test_case_params, parse_score_and_explanation, format_list, build_evaluation_logs
+from typing import Optional, List, Tuple, Union
+from agensight.eval.metrics import BaseMetric
+from agensight.eval.test_case import (
+    ModelTestCase,
+    ModelTestCaseParams,
+    ConversationalTestCase,
+)
+from agensight.eval.metrics.geval.template import GEvalTemplate
+from agensight.eval.utils import get_or_create_event_loop, prettify_list
+from agensight.eval.metrics.utils import (
+    construct_verbose_logs,
+    trimAndLoadJson,
+    check_llm_test_case_params,
+    initialize_model,
+)
+from agensight.eval.models import DeepEvalBaseLLM
+from agensight.eval.metrics.indicator import metric_progress_indicator
+from agensight.eval.metrics.geval.schema import *
+from agensight.eval.metrics.geval.utils import (
+    Rubric,
+    construct_g_eval_params_string,
+    construct_test_case_string,
+    format_rubrics,
+    no_log_prob_support,
+    calculate_weighted_summed_score,
+    validate_and_sort_rubrics,
+    validate_criteria_and_evaluation_steps,
+    number_evaluation_steps,
+    get_score_range,
+)
 
-EVAL_PARAMS_MAPPING = {
-    ModelTestCaseParams.INPUT: "Prompt",
-    ModelTestCaseParams.ACTUAL_OUTPUT: "Response",
-    ModelTestCaseParams.EXPECTED_OUTPUT: "Reference Answer",
-    ModelTestCaseParams.CONTEXT: "Background Info",
-    ModelTestCaseParams.RETRIEVAL_CONTEXT: "Retrieved Data",
-    ModelTestCaseParams.EXPECTED_TOOLS: "Expected Tool Usage",
-    ModelTestCaseParams.TOOLS_CALLED: "Actual Tool Usage",
-}
-
-def build_params_description_string(
-    model_test_case_params: List[ModelTestCaseParams],
-):
-    param_labels = [EVAL_PARAMS_MAPPING[param] for param in model_test_case_params]
-
-    if len(param_labels) == 1:
-        formatted_str = param_labels[0]
-    elif len(param_labels) == 2:
-        formatted_str = " and ".join(param_labels)
-    else:
-        formatted_str = (
-            ", ".join(param_labels[:-1]) + ", and " + param_labels[-1]
-        )
-
-    return formatted_str
 
 class GEvalEvaluator(BaseMetric):
     def __init__(
         self,
         name: str,
-        evaluation_params: Optional[List[ModelTestCaseParams]] = None,
+        evaluation_params:Optional[List[ModelTestCaseParams]] = None,
         criteria: Optional[str] = None,
         evaluation_steps: Optional[List[str]] = None,
-        model: str = "gpt-4o-mini",
+        rubric: Optional[List[Rubric]] = None,
+        model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         threshold: float = 0.5,
+        top_logprobs: int = 20,
+        async_mode: bool = False,
         strict_mode: bool = False,
         verbose_mode: bool = False,
+        _include_g_eval_suffix: bool = True,
     ):
-        super().__init__(threshold, strict_mode, verbose_mode)
+        validate_criteria_and_evaluation_steps(criteria, evaluation_steps)
         self.name = name
-        self.evaluation_params = evaluation_params or [
-            ModelTestCaseParams.INPUT,
-            ModelTestCaseParams.ACTUAL_OUTPUT
-        ]        
-        # Check if both criteria and evaluation_steps are not None at the same time
-        if criteria is None and evaluation_steps is None:
-            raise ValueError(
-                "Either 'criteria' or 'evaluation_steps' must be provided."
-            )
-
-        # Check if criteria is provided, it cannot be an empty string
-        if criteria is not None and not criteria.strip():
-            raise ValueError("Criteria provided cannot be an empty string.")
-
-        # Check if evaluation_steps is provided, it cannot be an empty list
-        if evaluation_steps is not None and len(evaluation_steps) == 0:
-            raise ValueError(
-                "'evaluation_steps' must not be an empty list. Either omit evaluation steps or include a non-empty list of steps."
-            )
-
+        self.evaluation_params = evaluation_params
+        if self.evaluation_params is None:
+            self.evaluation_params = [ModelTestCaseParams.INPUT, ModelTestCaseParams.ACTUAL_OUTPUT]
         self.criteria = criteria
-        self.model = model
-        self.evaluation_steps = evaluation_steps or self._create_evaluation_steps()
-        
-    def measure(self, test_case: ModelTestCase) -> float:
-        validate_test_case_params(test_case, self.evaluation_params, self)
-        raw_score, explanation = self.assess(test_case)
-        self.reason = explanation
-        self.score = float(raw_score) / 10
-        self.score = 0 if self.strict_mode and self.score < self.threshold else self.score
-        self.success = self.score >= self.threshold
-        
-        if self.verbose_mode:
-            self.verbose_logs = build_evaluation_logs(
+        self.rubric = validate_and_sort_rubrics(rubric)
+        self.model, self.using_native_model = initialize_model(model)
+        self.evaluation_model = self.model.get_model_name()
+        self.evaluation_steps = evaluation_steps
+        self.threshold = 1 if strict_mode else threshold
+        self.top_logprobs = top_logprobs
+        self.strict_mode = strict_mode
+        self.async_mode = async_mode
+        self.verbose_mode = verbose_mode
+        self._include_g_eval_suffix = _include_g_eval_suffix
+
+    def measure(
+        self,
+        test_case: Union[ModelTestCase, ConversationalTestCase],
+        _show_indicator: bool = True,
+        _in_component: bool = False,
+        _additional_context: Optional[str] = None,
+    ) -> float:
+        if isinstance(test_case, ConversationalTestCase):
+            test_case = test_case.turns[-1]
+        check_llm_test_case_params(test_case, self.evaluation_params, self)
+
+        self.evaluation_cost = 0 if self.using_native_model else None
+        with metric_progress_indicator(
+            self, _show_indicator=_show_indicator, _in_component=_in_component
+        ):
+            if self.async_mode:
+                loop = get_or_create_event_loop()
+                loop.run_until_complete(
+                    self.a_measure(
+                        test_case,
+                        _show_indicator=False,
+                        _in_component=_in_component,
+                        _additional_context=_additional_context,
+                    )
+                )
+            else:
+                self.evaluation_steps: List[str] = (
+                    self._generate_evaluation_steps()
+                )
+                g_score, reason = self._evaluate(
+                    test_case, _additional_context=_additional_context
+                )
+                self.reason = reason
+                self.score = float(g_score) / 10
+                self.score = (
+                    0
+                    if self.strict_mode and self.score < self.threshold
+                    else self.score
+                )
+                self.success = self.score >= self.threshold
+                self.verbose_logs = construct_verbose_logs(
+                    self,
+                    steps=[
+                        f"Criteria:\n{self.criteria}",
+                        f"Evaluation Steps:\n{prettify_list(self.evaluation_steps)}",
+                        f"Rubric:\n{format_rubrics(self.rubric)}",
+                        f"Score: {self.score}\nReason: {self.reason}",
+                    ],
+                )
+
+            return self.score
+
+    async def a_measure(
+        self,
+        test_case: Union[ModelTestCase, ConversationalTestCase],
+        _show_indicator: bool = True,
+        _in_component: bool = False,
+        _additional_context: Optional[str] = None,
+    ) -> float:
+        if isinstance(test_case, ConversationalTestCase):
+            test_case = test_case.turns[-1]
+        check_llm_test_case_params(test_case, self.evaluation_params, self)
+
+        self.evaluation_cost = 0 if self.using_native_model else None
+        with metric_progress_indicator(
+            self,
+            async_mode=True,
+            _show_indicator=_show_indicator,
+            _in_component=_in_component,
+        ):
+            self.evaluation_steps: List[str] = (
+                await self._a_generate_evaluation_steps()
+            )
+            g_score, reason = await self._a_evaluate(
+                test_case, _additional_context=_additional_context
+            )
+            self.reason = reason
+            self.score = (
+                float(g_score) / 10 if not self.strict_mode else int(g_score)
+            )
+            self.success = self.score >= self.threshold
+            self.verbose_logs = construct_verbose_logs(
                 self,
                 steps=[
-                    f"Evaluation Steps:\n{format_list(self.evaluation_steps)}",
+                    f"Criteria:\n{self.criteria}",
+                    f"Evaluation Steps:\n{prettify_list(self.evaluation_steps)}",
+                    f"Rubric:\n{format_rubrics(self.rubric)}",
                     f"Score: {self.score}\nReason: {self.reason}",
                 ],
             )
-            
-        return {
-            "score":self.score,
-            "reason":self.reason
-        }
-    
-    def _create_evaluation_steps(self) -> List[str]:
-        if not self.criteria:
-            return []
-            
-        # Default to some standard evaluation steps based on criteria
-        return [
-            f"Review the criteria: {self.criteria}",
-            "Examine all provided information in the test case",
-            "Evaluate how well the response fulfills the criteria",
-            "Assign a numerical rating from 0-10",
-            "Provide a concise explanation for your rating"
-        ]
-    
-    def assess(self, test_case: ModelTestCase) -> Tuple[Union[int, float], str]:
-        """Generate an evaluation score using LLM"""
-        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        
-        # Construct the test case string with only the relevant parameters
-        test_case_str = self.format_test_case(test_case)
-        
-        # Construct the evaluation parameters string
-        params_description = build_params_description_string(self.evaluation_params)
-        
-        # Generate the prompt using the template
-        prompt = ResponseEvalTemplate.get_template(
-            self.criteria, params_description, self.evaluation_steps
+            return self.score
+
+    async def _a_generate_evaluation_steps(self) -> List[str]:
+        if self.evaluation_steps:
+            return self.evaluation_steps
+
+        g_eval_params_str = construct_g_eval_params_string(
+            self.evaluation_params
         )
-        
-        # Call the LLM to assess
-        response = openai_client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": test_case_str}
-            ],
-            temperature=0,
+        prompt = GEvalTemplate.generate_evaluation_steps(
+            criteria=self.criteria, parameters=g_eval_params_str
         )
-        
-        response_text = response.choices[0].message.content
-        
-        # Extract score and reason
-        score, reason = parse_score_and_explanation(response_text)
-        
-        return score, reason
-    
-    def format_test_case(self, test_case: ModelTestCase) -> str:
-        text = """"""
-        for param in self.evaluation_params:
-            value = getattr(test_case, param.value)
-            if isinstance(value, ToolExecution):
-                value = repr(value)
-            elif isinstance(value, list):
-                if all(isinstance(item, ToolExecution) for item in value):
-                    value = "\n".join([repr(item) for item in value])
-                else:
-                    value = "\n".join(value)
-            text += f"{EVAL_PARAMS_MAPPING[param]}:\n{value}\n\n"
-        return text 
+        if self.using_native_model:
+            res, cost = await self.model.a_generate(prompt)
+            self.evaluation_cost += cost
+            data = trimAndLoadJson(res, self)
+            return data["steps"]
+        else:
+            try:
+                res: Steps = await self.model.a_generate(prompt, schema=Steps)
+                return res.steps
+            except TypeError:
+                res = await self.model.a_generate(prompt)
+                data = trimAndLoadJson(res, self)
+                return data["steps"]
+
+    def _generate_evaluation_steps(self) -> List[str]:
+        if self.evaluation_steps:
+            return self.evaluation_steps
+
+        g_eval_params_str = construct_g_eval_params_string(
+            self.evaluation_params
+        )
+        prompt = GEvalTemplate.generate_evaluation_steps(
+            criteria=self.criteria, parameters=g_eval_params_str
+        )
+        if self.using_native_model:
+            res, cost = self.model.generate(prompt)
+            self.evaluation_cost += cost
+            data = trimAndLoadJson(res, self)
+            return data["steps"]
+        else:
+            try:
+                res: Steps = self.model.generate(prompt, schema=Steps)
+                return res.steps
+            except TypeError:
+                res = self.model.generate(prompt)
+                data = trimAndLoadJson(res, self)
+                return data["steps"]
+
+    async def _a_evaluate(
+        self, test_case: ModelTestCase, _additional_context: Optional[str] = None
+    ) -> Tuple[Union[int, float], str]:
+        test_case_content = construct_test_case_string(
+            self.evaluation_params, test_case
+        )
+        g_eval_params_str = construct_g_eval_params_string(
+            self.evaluation_params
+        )
+        if not self.strict_mode:
+            rubric_str = format_rubrics(self.rubric) if self.rubric else None
+            prompt = GEvalTemplate.generate_evaluation_results(
+                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
+                test_case_content=test_case_content,
+                parameters=g_eval_params_str,
+                rubric=rubric_str,
+                score_range=get_score_range(self.rubric),
+                _additional_context=_additional_context,
+            )
+        else:
+            prompt = GEvalTemplate.generate_strict_evaluation_results(
+                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
+                test_case_content=test_case_content,
+                parameters=g_eval_params_str,
+                _additional_context=_additional_context,
+            )
+
+        try:
+            # don't use log probabilities for unsupported gpt models
+            if no_log_prob_support(self.model):
+                raise AttributeError("log_probs unsupported.")
+
+            # Don't have to check for using native model
+            # since generate raw response only exist for agensight.eval's native model
+            res, cost = await self.model.a_generate_raw_response(
+                prompt, top_logprobs=self.top_logprobs
+            )
+            self.evaluation_cost += cost
+            data = trimAndLoadJson(res.choices[0].message.content, self)
+
+            reason = data["reason"]
+            score = data["score"]
+            if self.strict_mode:
+                return score, reason
+
+            try:
+                weighted_summed_score = calculate_weighted_summed_score(
+                    score, res
+                )
+                return weighted_summed_score, reason
+            except:
+                return score, reason
+        except (
+            AttributeError
+        ):  # This catches the case where a_generate_raw_response doesn't exist.
+            if self.using_native_model:
+                res, cost = await self.model.a_generate(prompt)
+                self.evaluation_cost += cost
+                data = trimAndLoadJson(res, self)
+                return data["score"], data["reason"]
+            else:
+                try:
+                    res: ReasonScore = await self.model.a_generate(
+                        prompt, schema=ReasonScore
+                    )
+                    return res.score, res.reason
+                except TypeError:
+                    res = await self.model.a_generate(prompt)
+                    data = trimAndLoadJson(res, self)
+                    return data["score"], data["reason"]
+
+    def _evaluate(
+        self, test_case: ModelTestCase, _additional_context: Optional[str] = None
+    ) -> Tuple[Union[int, float], str]:
+        test_case_content = construct_test_case_string(
+            self.evaluation_params, test_case
+        )
+        g_eval_params_str = construct_g_eval_params_string(
+            self.evaluation_params
+        )
+
+        if not self.strict_mode:
+            rubric_str = format_rubrics(self.rubric) if self.rubric else None
+            prompt = GEvalTemplate.generate_evaluation_results(
+                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
+                test_case_content=test_case_content,
+                parameters=g_eval_params_str,
+                rubric=rubric_str,
+                score_range=get_score_range(self.rubric),
+                _additional_context=_additional_context,
+            )
+        else:
+            prompt = GEvalTemplate.generate_strict_evaluation_results(
+                evaluation_steps=number_evaluation_steps(self.evaluation_steps),
+                test_case_content=test_case_content,
+                parameters=g_eval_params_str,
+                _additional_context=_additional_context,
+            )
+
+        try:
+            # don't use log probabilities for unsupported gpt models
+            if no_log_prob_support(self.model):
+                raise AttributeError("log_probs unsupported.")
+
+            res, cost = self.model.generate_raw_response(
+                prompt, top_logprobs=self.top_logprobs
+            )
+            self.evaluation_cost += cost
+            data = trimAndLoadJson(res.choices[0].message.content, self)
+
+            reason = data["reason"]
+            score = data["score"]
+            if self.strict_mode:
+                return score, reason
+
+            try:
+                weighted_summed_score = calculate_weighted_summed_score(
+                    score, res
+                )
+                return weighted_summed_score, reason
+            except:
+                return score, reason
+        except AttributeError:
+            # This catches the case where a_generate_raw_response doesn't exist.
+            if self.using_native_model:
+                res, cost = self.model.generate(prompt)
+                self.evaluation_cost += cost
+                data = trimAndLoadJson(res, self)
+                return data["score"], data["reason"]
+            else:
+                try:
+                    res: ReasonScore = self.model.generate(
+                        prompt, schema=ReasonScore
+                    )
+                    return res.score, res.reason
+                except TypeError:
+                    res = self.model.generate(prompt)
+                    data = trimAndLoadJson(res, self)
+                    return data["score"], data["reason"]
+
+    def is_successful(self) -> bool:
+        if self.error is not None:
+            self.success = False
+        else:
+            try:
+                self.score >= self.threshold
+            except:
+                self.success = False
+        return self.success
+
+    @property
+    def __name__(self):
+        if self._include_g_eval_suffix:
+            return f"{self.name} (GEval)"
+        else:
+            return self.name

@@ -246,8 +246,12 @@ export async function getMetricsBatch(metricIds: string[]): Promise<MetricsBatch
 }
 
 // Utility function to format a score (0.0 to 1.0) as a percentage
-export function formatScore(score: number): string {
-  return `${score}`;
+export function formatScore(score: number | null | undefined): string {
+  if (score === null || score === undefined || isNaN(score)) {
+    return '0.00';
+  }
+  // Round to 2 decimal places and convert to string
+  return String(Math.round(Number(score) * 100) / 100);
 }
 
 // Utility to get a color based on score
