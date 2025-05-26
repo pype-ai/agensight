@@ -26,11 +26,12 @@ def transform_trace_to_agent_view(spans, span_details_by_id):
 
     for s in spans:
         details = span_details_by_id.get(s["id"], {})
+        last_user_message = None
         for p in details.get("prompts", []):
             if p["role"] == "user":
-                trace_input = p["content"]
-                break
-        if trace_input:
+                last_user_message = p["content"]
+        if last_user_message:
+            trace_input = last_user_message
             break
 
     for s in reversed(spans):
@@ -80,7 +81,8 @@ def transform_trace_to_agent_view(spans, span_details_by_id):
             "start_time": round(span["started_at"], 2),
             "end_time": round(span["ended_at"], 2),
             "tools_called": tools_called.copy(),
-            "final_completion": None
+            "final_completion": None,
+            "model_used": span.get("model_used", "unknown")
         }
 
         if span["id"] in span_details_by_id and "completions" in span_details_by_id[span["id"]]:
