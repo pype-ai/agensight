@@ -14,6 +14,7 @@ def setup_tracing(service_name="default", exporter_type=None):
         init_schema()
 
     exporter = get_exporter(exporter_type)
+
     processor = BatchSpanProcessor(exporter)
     provider = TracerProvider()
     provider.add_span_processor(TokenPropagator())
