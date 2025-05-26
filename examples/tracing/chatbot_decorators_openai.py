@@ -4,7 +4,8 @@ import agensight
 from agensight.tracing.decorators import trace, span
 
 # Init tracing and instrumentation
-agensight.init(name="chatbot-with-tools", mode="prod", project_id="abc12345", session={"id": "1111-1111-1111-1111", "name": "multi agent chat", "user_id": "123"})
+
+agensight.init(name="chatbot-with-tools", mode="local", project_id="abc12345")
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -98,7 +99,7 @@ class Agent:
 
         return choice.message
 
-@trace(name="multi_agent_chat", session={"id": "xyz123", "name": "multi agent chat", "user_id": "123"})
+@trace(name="multi_agent_chat", session={"id": "qwerty123", "name": "multi agent chat", "user_id": "112233"})
 def main():
     planner = Agent("Planner", "Plans things", tools=[weather_tool, news_tool])
     scheduler = Agent("Scheduler", "Schedules plans")

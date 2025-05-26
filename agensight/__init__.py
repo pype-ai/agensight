@@ -4,6 +4,9 @@ from agensight.tracing.config import configure_tracing, get_mode, set_mode, set_
 from .integrations import instrument_openai
 from .integrations import instrument_anthropic 
 from .tracing.decorators import trace, span
+from . import tracing
+from . import eval
+import json
 from .eval.setup import setup_eval
 
 import json
