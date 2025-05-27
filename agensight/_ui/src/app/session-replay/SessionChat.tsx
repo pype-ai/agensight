@@ -35,6 +35,7 @@ export interface Session {
 interface SessionChatProps {
   session: Session
   onRemoveMessage: (messageIdx: number) => void
+  onRemoveSession?: () => void  // Made optional
   onCloneSession: () => void
   onChangeModel: (model: string) => void
   onAddMessageToSession: (type: "input" | "output") => void
@@ -45,6 +46,7 @@ interface SessionChatProps {
 export const SessionChat = ({
   session,
   onRemoveMessage,
+  onRemoveSession,
   onCloneSession,
   onChangeModel,
   onAddMessageToSession,
@@ -89,17 +91,33 @@ export const SessionChat = ({
     <Card className="flex pt-0 rounded-none flex-col h-full bg-background border-muted shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between px-1 py-2 border-b border-muted bg-background/80 sticky top-0">
-        <Badge variant="secondary" className="text-xs">{selectedModelName}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">{selectedModelName}</Badge>
+        </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            title="Model Settings"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+          {onRemoveSession && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
-              title="Model Settings"
-              onClick={() => setIsSettingsOpen(true)}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+              title="Remove Session"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveSession();
+              }}
             >
-              <Settings className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
+          )}
           {/* Config/settings button */}
           {/* <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Settings">
             <RotateCcw className="w-4 h-4" />

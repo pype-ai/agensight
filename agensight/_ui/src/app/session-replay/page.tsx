@@ -7,9 +7,9 @@ import { ModelConfig, DEFAULT_MODEL_CONFIG } from "@/lib/models"
 import { SessionChat } from "./SessionChat"
 import { SessionInputBox } from "./SessionInputBox"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Card, CardContent } from "@/components/ui/card"
-import { Plus, Users, Split, Merge } from "lucide-react"
+import { Plus, Users, Split, Merge, Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 interface Message {
   id: string
@@ -251,18 +251,54 @@ export default function SessionReplay() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const sessionId = Object.keys(sessions)[0] || Date.now().toString()
-                cloneSession(sessionId)
-              }}
-              className="gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Comparison</span>
-            </Button>
+            <div className="relative flex items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={Object.keys(sessions).length >= 5}
+                onClick={() => {
+                  const sessionId = Object.keys(sessions)[0] || Date.now().toString()
+                  cloneSession(sessionId)
+                }}
+                className={cn(
+                  "gap-1.5 transition-colors",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "disabled:bg-muted/30 disabled:text-muted-foreground/70 disabled:hover:bg-muted/30"
+                )}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Comparison</span>
+                {Object.keys(sessions).length >= 5 && (
+                  <span className="absolute -right-1 -top-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-muted-foreground/40"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-muted-foreground/60"></span>
+                  </span>
+                )}
+              </Button>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 ml-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[200px]">
+                    <div className="space-y-0.5">
+                      {Object.keys(sessions).length >= 5 ? (
+                        <span className="text-destructive font-medium">Max 5 sessions</span>
+                      ) : (
+                        <span>Compare responses side by side</span>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <div className="h-6 w-px bg-border mx-1"></div>
             <span className="text-sm text-muted-foreground mr-1">Input:</span>
             <Button
@@ -295,11 +331,13 @@ export default function SessionReplay() {
               <div key={session.id} className="min-w-[400px] max-w-[500px] w-full flex-shrink-0 flex flex-col h-full">
                 <div className="flex-1 min-h-0">
                   <SessionChat
+                    key={session.id}
                     session={{
                       ...session,
                       config: session.config || { ...DEFAULT_MODEL_CONFIG }
                     }}
                     onRemoveMessage={(idx) => removeMessage(session.id, idx)}
+                    onRemoveSession={Object.keys(sessions).length > 1 ? () => removeSession(session.id) : undefined}
                     onCloneSession={() => cloneSession(session.id)}
                     onChangeModel={(model) => {
                       setSessions(prev => ({
