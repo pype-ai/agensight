@@ -13,17 +13,20 @@ interface SessionReplayLayoutProps {
 export default function SessionReplayLayout({ children }: SessionReplayLayoutProps) {
   const { open } = useSidebar();
   const { darkMode, toggleDarkMode } = useTheme();
+  
   return (
-    <div className="h-full bg-background w-full">
-      <div className="flex h-full w-full">
+    <div className="h-screen bg-background w-full flex flex-col">
+      <div className="flex flex-1 min-h-0">
         {/* Main Content */}
         <main
           className={`transition-all ${
-            open ? 'ml-0' : 'ml-18'
-          } w-full duration-200`}
+            open ? 'ml-0' : 'ml-[4.5rem]'
+          } flex-1 duration-200 flex flex-col min-h-0`}
         >
           <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-          {children}
+          <div className="flex-1 min-h-0">
+            {children}
+          </div>
         </main>
       </div>
     </div>
