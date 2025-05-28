@@ -2,7 +2,12 @@ import os
 import openai
 from agensight import init, trace, span 
 
-init(name="chatbot-with-tools")
+# Initialize with prod mode and project ID
+init(
+    name="chatbot-with-tools",
+    mode="prod",  # Ensure we're in prod mode
+    project_id="385ee1e6-5fbb-4b16-89a5-531c20742366"  # Required for prod mode
+)
 
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -20,7 +25,8 @@ def call_openai(messages):
     )
     return response.choices[0].message.content.strip()
 
-@trace("chat_interaction", session='abc123')
+# Session info will be handled by the trace decorator
+@trace("chat_interaction", session={"id": "11-22-33-44", "user_id": "user123", "project_id": "385ee1e6-5fbb-4b16-89a5-531c20742366", "name": "chatbot-cloud-demo"})
 def process_single_interaction(messages, user_input):
     messages.append({"role": "user", "content": user_input})
     reply = call_openai(messages)

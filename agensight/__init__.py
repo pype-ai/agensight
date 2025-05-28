@@ -49,8 +49,8 @@ def init(name="default", mode="local", auto_instrument_llms=True, session=None, 
         if get_mode() in ["prod", "dev"]:
             try:
                 requests.post(
-                    "http://localhost:4000/dev/api/v1/logs/create/session",
-                    headers={"Content-Type": "application/json"},
+                    "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {project_id}" },
                     data=json.dumps({
                         "data": {
                             "id": session_id,

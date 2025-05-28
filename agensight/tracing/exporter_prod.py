@@ -8,19 +8,19 @@ from agensight.tracing.utils import _make_io_from_openai_attrs
 from agensight.tracing.config import get_project_id, get_mode
 from agensight.tracing.decorators import current_trace_id, current_trace_name
 
-BASE_URL = "http://localhost:4000/dev/api/v1/logs/create"
+BASE_URL = "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create"
 
 def post_to_lambda(endpoint: str, data: dict):
     try:
         url = f"{BASE_URL}/{endpoint}"
         response = requests.post(
             url,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {get_project_id()}"},
             data=json.dumps({"data": data}),
             timeout=2
         )
         return response.status_code == 200
-    except Exception:
+    except Exception as e:
         return False
 
 class ProdSpanExporter(SpanExporter):
