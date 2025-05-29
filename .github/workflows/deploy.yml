@@ -6,14 +6,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Build package
+      run: |
+        echo "📦 Building package for debug..."
+        python -m pip install --upgrade pip build
+        python -m build
+        
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+
   deploy-staging:
+    needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     environment: staging
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
       
     - name: Debug Step 1 - Environment Info
       run: |
@@ -80,46 +108,32 @@ jobs:
         echo "Full token: $TEST_TOKEN"
         echo "Token validation complete"
         
-    - name: Debug Step 5 - Create Test Package
+    - name: Debug Step 5 - Check Downloaded Package
       run: |
-        echo "🔍 Step 5: Creating minimal test package"
+        echo "🔍 Step 5: Checking downloaded package files"
+        echo "Current directory: $(pwd)"
+        echo "Files in current directory:"
+        ls -la
+        echo "Files in dist directory:"
+        ls -la dist/ || echo "No dist directory"
         
-        # Create test directory
-        mkdir -p test_package
-        cd test_package
+        if [ -f dist/*.whl ] 2>/dev/null; then
+          echo "✅ Found wheel files"
+          ls -la dist/*.whl
+        else
+          echo "❌ No wheel files found"
+        fi
         
-        # Create minimal setup.py
-        TIMESTAMP=$(date +%s)
-        cat > setup.py << EOF
-from setuptools import setup
-setup(
-    name="debug-test-token-$TIMESTAMP",
-    version="0.0.1", 
-    description="Debug test for token",
-    author="Debug Test",
-    py_modules=[],
-)
-EOF
-        
-        echo "Created setup.py:"
-        cat setup.py
-        
-    - name: Debug Step 6 - Build Test Package
+    - name: Debug Step 6 - Prepare Package Files
       run: |
-        echo "🔍 Step 6: Building test package"
-        cd test_package
-        
-        python -m pip install --upgrade pip build
-        python -m build
-        
-        echo "Build completed. Files created:"
+        echo "🔍 Step 6: Preparing package files for upload"
+        echo "Available package files:"
         ls -la dist/
         
-        echo "Moving dist files to parent for upload test"
-        mv dist/* ../
-        cd ..
+        # Copy files to current directory for easier access
+        cp dist/* . 2>/dev/null || echo "No files to copy"
         
-        echo "Files available for upload:"
+        echo "Files ready for upload:"
         ls -la *.whl *.tar.gz 2>/dev/null || echo "No package files found"
         
     - name: Debug Step 7 - Install Twine
@@ -152,7 +166,7 @@ EOF
         echo "TWINE_PASSWORD first 15 chars: ${TWINE_PASSWORD:0:15}"
         
         echo "Files to upload:"
-        ls -la *.whl *.tar.gz
+        ls -la dist/
         
         echo "Starting upload with verbose logging..."
         
@@ -165,7 +179,7 @@ EOF
           --password "$TWINE_PASSWORD" \
           --verbose \
           --skip-existing \
-          *.whl *.tar.gz || {
+          dist/* || {
           
           echo "❌ Upload failed!"
           echo "Exit code: $?"
@@ -197,7 +211,7 @@ print(f'Contains newlines: {chr(10) in token}')
         echo "✅ Token is working correctly"
         echo "✅ Package uploaded successfully"
         
-        PACKAGE_NAME=$(ls *.whl | head -1 | cut -d'-' -f1)
+        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
         echo "🌐 Check your package at: https://test.pypi.org/project/$PACKAGE_NAME/"
 
   deploy-production:
