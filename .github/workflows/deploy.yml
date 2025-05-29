@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -52,55 +52,62 @@ jobs:
         echo "📋 Built files:"
         ls -la dist/
         
-    - name: Check built package names
-      run: |
-        echo "🏷️ Package names in dist/:"
-        for file in dist/*; do
-          echo "  - $(basename $file)"
-        done
-        
-    - name: Deploy to Test PyPI (staging)
-      if: github.ref == 'refs/heads/staging'
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging  # ← This is the key line!
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+      
+    - name: Deploy to Test PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}  # Now accessible!
       run: |
         echo "🚀 Deploying to Test PyPI..."
         echo "📦 Files to upload:"
         ls -la dist/
         
-        # Debug token (safely)
         if [ -z "$TWINE_PASSWORD" ]; then
           echo "❌ TWINE_PASSWORD is empty!"
           exit 1
-        elif [[ $TWINE_PASSWORD == pypi-* ]]; then
-          echo "✅ Token format looks correct (starts with 'pypi-')"
-          echo "🔑 Token length: ${#TWINE_PASSWORD} characters"
         else
-          echo "❌ Token format is wrong. Should start with 'pypi-'"
-          echo "🔍 Token starts with: ${TWINE_PASSWORD:0:10}..."
-          exit 1
+          echo "✅ Token is available"
+          echo "🔑 Token length: ${#TWINE_PASSWORD} characters"
         fi
         
-        echo "📤 Starting upload with verbose logging..."
+        pip install twine
         twine upload --repository testpypi dist/* --verbose --non-interactive
-        
-    - name: Verify Test PyPI upload
-      if: github.ref == 'refs/heads/staging'
-      run: |
-        echo "✅ Upload completed. Waiting 30 seconds for package to be available..."
-        sleep 30
-        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
-        echo "🔍 Testing installation of package: $PACKAGE_NAME"
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAME || echo "⚠️ Installation test failed (might be normal for new packages)"
-        
-    - name: Deploy to PyPI (production)
-      if: github.ref == 'refs/heads/main'
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+      
+    - name: Deploy to PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}  # Repository secret
       run: |
         echo "🚀 Deploying to Production PyPI..."
-        echo "📦 Files to upload:"
-        ls -la dist/
+        pip install twine
         twine upload dist/* --verbose --non-interactive
