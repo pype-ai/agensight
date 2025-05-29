@@ -69,7 +69,7 @@ def ensure_ui_built():
 ensure_ui_built()
 
 setup(
-    name="agensight",
+    name="agensight-dev",
     version=get_version(),
     author="Pype",
     author_email="deepesh@pypeai.com",
