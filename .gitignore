@@ -18,3 +18,4 @@ agensight.config.json
 .env
 .DS_Store
 agensight/.DS_Store
+fix.sh
