@@ -46,7 +46,8 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
                 if mode in ["prod", "dev"]:
                     try:
                         requests.post(
-                            "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
+                            "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create/session",
+                            # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
                             headers={
                                 "Content-Type": "application/json",
                                 "Authorization": f"Bearer {get_project_id()}"
