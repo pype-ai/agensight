@@ -68,7 +68,7 @@ def ensure_ui_built():
 ensure_ui_built()
 
 setup(
-    name="tester-sdk-demo-pypeai",
+    name="agensight-sdk",
     version=get_version(),
     author="Pype",
     author_email="deepesh@pypeai.com",

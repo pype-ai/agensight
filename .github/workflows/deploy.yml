@@ -68,7 +68,20 @@ jobs:
         echo "🚀 Deploying to Test PyPI..."
         echo "📦 Files to upload:"
         ls -la dist/
-        echo "🔑 Token starts with: ${TWINE_PASSWORD:0:15}..."
+        
+        # Debug token (safely)
+        if [ -z "$TWINE_PASSWORD" ]; then
+          echo "❌ TWINE_PASSWORD is empty!"
+          exit 1
+        elif [[ $TWINE_PASSWORD == pypi-* ]]; then
+          echo "✅ Token format looks correct (starts with 'pypi-')"
+          echo "🔑 Token length: ${#TWINE_PASSWORD} characters"
+        else
+          echo "❌ Token format is wrong. Should start with 'pypi-'"
+          echo "🔍 Token starts with: ${TWINE_PASSWORD:0:10}..."
+          exit 1
+        fi
+        
         echo "📤 Starting upload with verbose logging..."
         twine upload --repository testpypi dist/* --verbose --non-interactive
         
