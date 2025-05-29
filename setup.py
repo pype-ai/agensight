@@ -68,7 +68,7 @@ def ensure_ui_built():
 ensure_ui_built()
 
 setup(
-    name="agensight-sdk",
+    name="agensight-dev",
     version=get_version(),
     author="Pype",
     author_email="deepesh@pypeai.com",
@@ -76,6 +76,7 @@ setup(
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     url="https://github.com/pype-ai/agensight",
+    license="MIT",  # Use this instead of license-file
     project_urls={
         "Bug Tracker": "https://github.com/pype-ai/agensight/issues",
         "Documentation": "https://pype-db52d533.mintlify.app/introduction",
