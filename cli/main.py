@@ -1,4 +1,4 @@
-# agensight/cli/main.py
+#cli/main.py
 
 import argparse
 import webbrowser
