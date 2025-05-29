@@ -68,10 +68,10 @@ def ensure_ui_built():
 ensure_ui_built()
 
 setup(
-    name="agensight",
+    name="agensight-dev",
     version=get_version(),
     author="Pype",
-    author_email="your-email@example.com",
+    author_email="deepesh@pypeai.com",
     description="A Python SDK for logging and visualizing OpenAI agent interactions, with a built-in CLI and web dashboard.",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
