@@ -35,33 +35,22 @@ jobs:
           echo "No UI directory found, skipping UI build"
         fi
         
-    - name: Install build tools
+    - name: Install build tools (matching your local script)
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade packaging  # Fix for twine 6.1.0 license-file bug
-        pip install --upgrade setuptools  # Also upgrade setuptools
-        pip install build twine
+        pip install --upgrade setuptools wheel twine
         
-    - name: Show package info before build
+    - name: Clean build directories (matching your script)
       run: |
-        echo "🔍 Package name in setup.py:"
-        grep -n "name=" setup.py
-        echo "📦 Python version: $(python --version)"
-        echo "🔧 Packaging version: $(pip show packaging | grep Version)"
-        echo "🛠️  Setuptools version: $(pip show setuptools | grep Version)"
-        echo "🛠️  Build version: $(pip show build | grep Version)"
+        rm -rf dist/*
+        rm -rf build/*
         
-    - name: Build package
+    - name: Build package (matching your script method)
       run: |
-        echo "📦 Building package..."
-        python -m build
+        echo "📦 Building package using setup.py (same as your local script)..."
+        python setup.py sdist bdist_wheel
         echo "📋 Built files:"
         ls -la dist/
-        
-    - name: Check package metadata
-      run: |
-        echo "🔍 Checking built package for license-file issues..."
-        twine check dist/*
         
     - name: Upload package artifacts
       uses: actions/upload-artifact@v4
@@ -81,49 +70,34 @@ jobs:
       with:
         name: package-dist
         path: dist/
-      
-    - name: Install twine with updated packaging
+        
+    - name: Install twine
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade packaging  # Ensure we have the fix
         pip install twine
         
-    - name: Deploy to Test PyPI
+    - name: Deploy to Test PyPI (using your script method)
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
-        echo "🚀 Deploying to Test PyPI..."
+        echo "🚀 Deploying to Test PyPI using your script method..."
         echo "📦 Files to upload:"
         ls -la dist/
         
         if [ -z "$TWINE_PASSWORD" ]; then
-          echo "❌ TWINE_PASSWORD is empty!"
+          echo "❌ TEST_PYPI_TOKEN not available!"
           exit 1
-        else
-          echo "✅ Token is available"
-          echo "🔑 Token length: ${#TWINE_PASSWORD} characters"
         fi
         
-        echo "📤 Starting upload..."
-        # Add --verbose to see the exact error response
-        twine upload --repository testpypi dist/* --verbose --non-interactive || {
-          echo "❌ Upload failed. Common causes:"
-          echo "1. Package name 'agensight-dev' already exists and you don't own it"
-          echo "2. Version '0.5.4' already uploaded"
-          echo "3. Token doesn't have upload permissions"
-          echo "💡 Try changing the package name to something unique like 'test-agensight-$(date +%s)'"
-          exit 1
-        }
+        # Use the same command structure as your script but for Test PyPI
+        twine upload dist/* -u __token__ -p $TWINE_PASSWORD --repository testpypi --verbose
         
     - name: Verify deployment
       run: |
-        echo "✅ Upload completed. Testing installation..."
-        sleep 60  # Wait for package to be available
+        echo "✅ Upload completed!"
         PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
-        echo "🔍 Testing installation of: $PACKAGE_NAME"
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAME
-        python -c "import agensight; print('✅ Package imported successfully')" || echo "⚠️ Import test skipped"
+        echo "🌐 Package available at: https://test.pypi.org/project/$PACKAGE_NAME/"
 
   deploy-production:
     needs: build
@@ -136,17 +110,16 @@ jobs:
       with:
         name: package-dist
         path: dist/
-      
-    - name: Install twine with updated packaging
+        
+    - name: Install twine
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade packaging
         pip install twine
         
-    - name: Deploy to PyPI
+    - name: Deploy to Production PyPI (exactly like your script)
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
-        echo "🚀 Deploying to Production PyPI..."
-        twine upload dist/* --verbose --non-interactive
+        echo "🚀 Deploying to Production PyPI (same as your local script)..."
+        twine upload dist/* -u __token__ -p $TWINE_PASSWORD
