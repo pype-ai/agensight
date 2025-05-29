@@ -11,7 +11,7 @@ from agensight import init, trace, span
 init(
     name="langraph-chatbot-with-tools",
     mode="prod",  # Ensure we're in prod mode
-    project_id="385ee1e6-5fbb-4b16-89a5-531c20742366"  # Required for prod mode
+    project_id="773b7798"  # Required for prod mode
 )
 
 # Check for OpenAI API key
@@ -79,9 +79,8 @@ def create_chat_graph():
 
 @trace("langraph_chat_interaction", 
        session={
-           "id": "11-22-33-44-55-66", 
-           "user_id": "user123", 
-           "project_id": "385ee1e6-5fbb-4b16-89a5-531c20742366", 
+           "id": "123-123-123", 
+           "user_id": "user1234",
            "name": "langraph-chatbot-demo"
        })
 def process_interaction(app, state: State, user_input: str):
