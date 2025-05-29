@@ -60,7 +60,7 @@ jobs:
         
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-results-${{ matrix.python-version }}-${{ matrix.test-type }}
         path: |
@@ -107,7 +107,7 @@ jobs:
         NODE_ENV=staging npm run build
         
     - name: Upload UI build
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ui-staging-build
         path: ./agensight/_ui/build/
@@ -145,7 +145,7 @@ jobs:
         locust -f tests/load/locustfile.py --headless -u 10 -r 2 -t 30s --host=http://localhost:8000
         
     - name: Upload performance results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-results
         path: |
@@ -183,7 +183,7 @@ jobs:
         semgrep --config=auto --json --output=semgrep-report.json agensight/
         
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -205,7 +205,7 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Download UI build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ui-staging-build
         path: ./agensight/_ui/build/
@@ -246,7 +246,7 @@ jobs:
         twine check dist/*
         
     - name: Upload package artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: staging-package
         path: dist/
@@ -262,7 +262,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: staging-package
         path: dist/
@@ -327,7 +327,7 @@ jobs:
         echo "- **Status**: ✅ Success" >> staging-report.md
         
     - name: Upload staging report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: staging-report
         path: staging-report.md
