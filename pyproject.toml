@@ -1,3 +1,93 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "packaging"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+license-files = []
+
+[tool.setuptools.packages.find]
+# This helps setuptools find your packages
+
+[tool.setuptools.package-data]
+agensight = [
+    "_ui/out/",            # Include the directory itself
+    "_ui/out/**",          # Everything under out/
+]
+
+[project]
+name = "agensight"
+version = "1.1.6"
+description = "A Python SDK for logging and visualizing OpenAI agent interactions"
+authors = [{name = "Pype", email = "deepesh@pypeai.com"}]
+license = {text = "MIT"}
+readme = "readme.sdk.md"
+requires-python = ">=3.10"
+keywords = ["openai", "ai", "agents", "logging", "visualization", "sdk", "cli", "dashboard"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers", 
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "openai",
+    "requests", 
+    "flask",
+    "nest_asyncio",
+    "flask_cors",
+    "fastapi",
+    "uvicorn",
+    "ragas",
+    "sqlalchemy",
+    "pydantic",
+    "starlette",
+    "typing-extensions",
+    "python-multipart",
+    "werkzeug",
+    "jinja2",
+    "aiofiles",
+    "click",
+    "opentelemetry-sdk",
+    "opentelemetry-api",
+    "opentelemetry-instrumentation",
+    "opentelemetry-instrumentation-openai",
+    "anthropic",
+    "scikit-learn>=1.0.0",
+    "pandas>=1.3.0",
+    "numpy>=1.20.0",
+    "google-generativeai",
+    "retry",
+    "rich",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0", 
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+]
+
+[project.scripts]
+agensight = "cli.main:main"  # Changed to match package name
+
+[project.urls]
+Homepage = "https://github.com/pype-ai/agensight"
+Issues = "https://github.com/pype-ai/agensight/issues"
+Documentation = "https://pype-db52d533.mintlify.app/introduction"
+"Source Code" = "https://github.com/pype-ai/agensight"

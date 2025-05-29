@@ -1,0 +1,236 @@
+name: Deploy SDK
+
+on:
+  push:
+    branches: [ main, staging ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Set up Node.js (for UI build)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        
+    - name: Build UI (if exists)
+      run: |
+        if [ -d "./agensight/_ui" ]; then
+          echo "🎨 Building UI..."
+          cd ./agensight/_ui
+          npm install
+          npm run build
+          cd ../..
+          echo "✅ UI build completed"
+        else
+          echo "ℹ️  No UI directory found, skipping UI build"
+        fi
+        
+    - name: Install build tools
+      run: |
+        echo "🔧 Installing build tools..."
+        python -m pip install --upgrade pip
+        pip install --upgrade setuptools wheel build twine
+        
+    - name: Clean build directories
+      run: |
+        echo "🧹 Cleaning build directories..."
+        rm -rf dist/* build/*
+        
+    - name: Build package
+      run: |
+        echo "📦 Building package..."
+        python -m build
+        echo "✅ Package build completed"
+        
+    - name: Show built packages
+      run: |
+        echo "📋 Built packages:"
+        ls -la dist/
+        
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+        
+    - name: Environment Info
+      run: |
+        echo "🔍 Staging Deployment Information"
+        echo "Branch: ${{ github.ref }}"
+        echo "Event: ${{ github.event_name }}"
+        echo "Python version: $(python --version)"
+        
+    - name: Verify Test PyPI Token
+      env:
+        TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        echo "🔑 Verifying Test PyPI token..."
+        if [ -z "$TEST_TOKEN" ]; then
+          echo "❌ TEST_PYPI_TOKEN is not set!"
+          echo "💡 Go to Settings → Secrets → Actions and add TEST_PYPI_TOKEN"
+          exit 1
+        else
+          echo "✅ Test PyPI token is available"
+          echo "Token length: ${#TEST_TOKEN} characters"
+        fi
+        
+        if [[ "$TEST_TOKEN" == pypi-* ]]; then
+          echo "✅ Token format is correct"
+        else
+          echo "❌ Token should start with 'pypi-'"
+          exit 1
+        fi
+        
+    - name: Install Twine
+      run: |
+        echo "📦 Installing Twine..."
+        pip install twine
+        
+    - name: Deploy to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        echo "🚀 Deploying to Test PyPI..."
+        echo "Files to upload:"
+        ls -la dist/
+        
+        twine upload --repository testpypi dist/* --verbose
+        
+    - name: Staging Success
+      run: |
+        echo "✅ SUCCESS! Package deployed to Test PyPI"
+        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
+        
+        echo ""
+        echo "📦 Test Package Details:"
+        echo "   Name: $PACKAGE_NAME"
+        echo "   URL: https://test.pypi.org/project/$PACKAGE_NAME/"
+        echo ""
+        echo "🧪 Installation Instructions for Testers:"
+        echo "   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAME"
+        echo ""
+        echo "💡 Virtual Environment (Recommended):"
+        echo "   python -m venv test-env"
+        echo "   source test-env/bin/activate"
+        echo "   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAME"
+        echo ""
+        echo "✅ Verification Commands:"
+        echo "   agensight --help"
+        echo "   python -c \"import agensight; print('✅ SDK imported successfully')\""
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
+        
+    - name: Production Environment Info
+      run: |
+        echo "🚀 Production Deployment Information"
+        echo "Branch: ${{ github.ref }}"
+        echo "Event: ${{ github.event_name }}"
+        echo "Python version: $(python --version)"
+        echo "Deploying to production PyPI..."
+        
+    - name: Verify Production PyPI Token
+      env:
+        PROD_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        echo "🔑 Verifying Production PyPI token..."
+        if [ -z "$PROD_TOKEN" ]; then
+          echo "❌ PYPI_TOKEN is not set!"
+          echo "💡 Go to Settings → Secrets → Actions and add PYPI_TOKEN"
+          exit 1
+        else
+          echo "✅ Production PyPI token is available"
+          echo "Token length: ${#PROD_TOKEN} characters"
+        fi
+        
+        if [[ "$PROD_TOKEN" == pypi-* ]]; then
+          echo "✅ Token format is correct"
+        else
+          echo "❌ Token should start with 'pypi-'"
+          exit 1
+        fi
+        
+    - name: Install Twine
+      run: |
+        echo "📦 Installing Twine..."
+        pip install twine
+        
+    - name: Verify Package Quality
+      run: |
+        echo "🔍 Running package quality checks..."
+        twine check dist/*
+        
+    - name: Deploy to Production PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        echo "🚀 Deploying to Production PyPI..."
+        echo "Files to upload:"
+        ls -la dist/
+        
+        # Upload to production PyPI (no --repository flag = production)
+        twine upload dist/* --verbose
+        
+    - name: Production Success
+      run: |
+        echo "🎉 SUCCESS! Package deployed to Production PyPI"
+        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
+        VERSION=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f2)
+        
+        echo ""
+        echo "📦 Production Package Details:"
+        echo "   Name: $PACKAGE_NAME"
+        echo "   Version: $VERSION"
+        echo "   URL: https://pypi.org/project/$PACKAGE_NAME/"
+        echo ""
+        echo "📥 Installation Instructions:"
+        echo "   pip install $PACKAGE_NAME"
+        echo ""
+        echo "📋 Alternative installations:"
+        echo "   pip install $PACKAGE_NAME==$VERSION  # Specific version"
+        echo "   pip install --upgrade $PACKAGE_NAME  # Upgrade to latest"
+        echo ""
+        echo "✅ Verification Commands:"
+        echo "   agensight --help"
+        echo "   python -c \"import agensight; print('✅ SDK imported successfully')\""
+        echo ""
+        echo "🎯 Next Steps:"
+        echo "   - Update documentation with new version"
+        echo "   - Announce release to users"
+        echo "   - Monitor for any issues"

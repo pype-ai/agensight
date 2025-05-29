@@ -6,7 +6,7 @@ node_modules
 log
 build
 agensight/tracing/traces.db
-agensight.egg-info
+*.egg-info
 # Python cache files
 __pycache__/
 *.py[cod]
@@ -18,3 +18,4 @@ agensight.config.json
 .env
 .DS_Store
 agensight/.DS_Store
+fix.sh
