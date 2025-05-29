@@ -10,17 +10,13 @@ license-files = []
 
 [tool.setuptools.package-data]
 agensight = [
-    "_ui/build/**/*",
-    "_ui/out/**/*", 
-    "_ui/dist/**/*",
-    "templates/**/*",
-    "static/**/*",
-    "data/**/*",
+    "_ui/out/",            # Include the directory itself
+    "_ui/out/**",          # Everything under out/
 ]
 
 [project]
 name = "agensight-dev"
-version = "0.1.4"
+version = "0.1.5"
 description = "A Python SDK for logging and visualizing OpenAI agent interactions"
 authors = [{name = "Pype", email = "deepesh@pypeai.com"}]
 license = {text = "MIT"}
