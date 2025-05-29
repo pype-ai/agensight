@@ -11,8 +11,11 @@ license-files = []
 [tool.setuptools.package-data]
 agensight = [
     "_ui/build/**/*",
-    "templates/**/*", 
+    "_ui/out/**/*", 
+    "_ui/dist/**/*",
+    "templates/**/*",
     "static/**/*",
+    "data/**/*",
 ]
 
 [project]
