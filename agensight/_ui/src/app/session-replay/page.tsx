@@ -10,54 +10,73 @@ import { Button } from "@/components/ui/button"
 import { Plus, Users, Split, Merge, Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-
-interface Message {
-  id: string
-  type: "input" | "output"
-  content: string
-  isEditing?: boolean
-}
+import { useQuery } from "@tanstack/react-query"
+import { ConfigVersion, getConfigByVersion, getConfigVersions } from "@/lib/services/config"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { IconGitBranch } from "@tabler/icons-react"
+import { processMessageThroughAgents } from "@/lib/agentSimulation"
+import { AgentConfig, AgentConfigData, Message } from "@/lib/types/agent"
 
 interface Session {
   id: string
   messages: Message[]
   loading: boolean
+  isSending?: boolean
   error: string | null
   config?: ModelConfig
 }
 
+// Move helper function outside the component to prevent recreation
+async function getVersionsWithRetry() {
+  try {
+    return await getConfigVersions()
+  } catch (error) {
+    console.error('Failed to fetch versions, retrying...', error)
+    throw error
+  }
+}
+
 export default function SessionReplay() {
+  // 1. State hooks - must be called in the same order on every render
   const [sessions, setSessions] = useState<Record<string, Session>>({})
   const [inputValue, setInputValue] = useState("")
   const [inputMode, setInputMode] = useState<"shared" | "split">("shared")
   const [sessionInputs, setSessionInputs] = useState<Record<string, string>>({})
+  const [selectedVersion, setSelectedVersion] = useState<string>('')
+  const [availableVersions, setAvailableVersions] = useState<ConfigVersion[]>([])
+  
+  // 2. Other hooks (order matters!)
   const searchParams = useSearchParams()
-
-  // Initialize sessions from URL params
-  useEffect(() => {
-    const sessionIdParam = searchParams.get("session_id")
-    if (!sessionIdParam) return
-    const sessionIds = sessionIdParam
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-    console.log("Parsed session IDs:", sessionIds)
-    if (sessionIds.length === 0) return
-    // Initialize sessions
-    const initialSessions: Record<string, Session> = {}
-    sessionIds.forEach((id) => {
-      initialSessions[id] = {
-        id,
-        messages: [],
-        loading: true,
-        error: null,
-        config: { ...DEFAULT_MODEL_CONFIG }
+  
+  // 3. Data fetching hooks
+  const versionsQuery = useQuery({
+    queryKey: ['config-versions'],
+    queryFn: getVersionsWithRetry,
+  })
+  
+  const configQuery = useQuery<AgentConfigData>({
+    queryKey: ['config', selectedVersion],
+    queryFn: async () => {
+      if (!selectedVersion) {
+        throw new Error('No version selected')
       }
-    })
-    setSessions(initialSessions)
-    // Load traces for each session
-    sessionIds.forEach((sessionId) => loadSessionTraces(sessionId))
-  }, [searchParams])
+      
+      try {
+        console.log(`[${new Date().toISOString()}] Fetching config for version:`, selectedVersion)
+        const data = await getConfigByVersion(selectedVersion)
+        console.log(`[${new Date().toISOString()}] Received config data:`, {
+          agents: data.agents?.map((a: AgentConfig) => a.name) || [],
+          connections: data.connections?.length || 0,
+          prompts: data.prompts?.length || 0
+        })
+        return data
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] Error fetching config:`, error)
+        throw error
+      }
+    },
+    enabled: !!selectedVersion,
+  })
 
   const loadSessionTraces = async (sessionId: string) => {
     try {
@@ -83,24 +102,36 @@ export default function SessionReplay() {
         }),
       )
 
-      // Convert traces to messages
-      const messages: Message[] = []
-      detailedTraces.forEach((trace, index) => {
+      // Convert traces to messages with timestamps and sort them
+      const messages: (Message & { timestamp?: number })[] = []
+      detailedTraces.forEach((trace: any) => {
+        // Get the earliest timestamp from agents or use current time as fallback
+        const traceTime = trace.agents?.length > 0 
+          ? Math.min(...(trace.agents as Array<{ start_time?: number }>).map((a: { start_time?: number }) => a.start_time || 0)) 
+          : Date.now() / 1000; // Convert to seconds to match other timestamps
+          
         if (trace.trace_input) {
           messages.push({
             id: `${trace.id}-input`,
             type: "input",
+            role: 'user',
             content: trace.trace_input,
+            timestamp: traceTime
           })
         }
         if (trace.trace_output) {
           messages.push({
             id: `${trace.id}-output`,
             type: "output",
+            role: 'assistant',
             content: trace.trace_output,
+            timestamp: traceTime + 0.01 // Add a small offset to maintain input before output
           })
         }
       })
+      
+      // Sort messages by timestamp (oldest first)
+      messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
 
       setSessions((prev) => ({
         ...prev,
@@ -122,6 +153,85 @@ export default function SessionReplay() {
       }))
     }
   }
+
+    // Initialize sessions from URL params
+    useEffect(() => {
+      const sessionIdParam = searchParams.get("session_id")
+      if (!sessionIdParam) return
+      const sessionIds = sessionIdParam
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+      console.log("Parsed session IDs:", sessionIds)
+      if (sessionIds.length === 0) return
+      // Initialize sessions
+      const initialSessions: Record<string, Session> = {}
+      sessionIds.forEach((id) => {
+        initialSessions[id] = {
+          id,
+          messages: [],
+          loading: true,
+          error: null,
+          config: { ...DEFAULT_MODEL_CONFIG }
+        }
+      })
+      setSessions(initialSessions)
+      // Load traces for each session
+      sessionIds.forEach((sessionId) => loadSessionTraces(sessionId))
+    }, [searchParams])
+
+  // Define render functions for different states
+  const renderLoadingState = () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+      <span className="ml-2">Loading agent configuration...</span>
+    </div>
+  );
+
+  const renderErrorState = (error: Error | unknown) => (
+    <div className="p-4 text-red-500">
+      Failed to load agent configuration: {error instanceof Error ? error.message : 'Unknown error'}
+    </div>
+  );
+
+  const renderNoConfigState = () => (
+    <div className="p-4 text-yellow-500">
+      No agent configuration available. Please select a valid version.
+    </div>
+  );
+
+  const {
+    data: configData,
+    isLoading: isConfigLoading,
+    error: configError,
+  } = configQuery;
+
+  // 4. Effects - process versions data when it changes
+  useEffect(() => {
+    if (versionsQuery.data) {
+      const filteredVersions = versionsQuery.data.filter(
+        (v: ConfigVersion) =>
+          v.version !== 'current' && v.version.match(/^\d+\.\d+\.\d+$/)
+      )
+
+      filteredVersions.sort((a: ConfigVersion, b: ConfigVersion) => {
+        return b.version.localeCompare(a.version, undefined, { numeric: true })
+      })
+
+      setAvailableVersions(filteredVersions)
+
+      if (filteredVersions.length > 0 && !selectedVersion) {
+        setSelectedVersion(filteredVersions[0].version)
+      }
+    }
+  }, [versionsQuery.data, selectedVersion])
+
+  if (isConfigLoading) return renderLoadingState();
+  if (configError) return renderErrorState(configError);
+  if (!configData) return renderNoConfigState();
+
+
+
 
   // Cloning a session (deep copy)
   const cloneSession = (sessionId: string) => {
@@ -156,8 +266,9 @@ export default function SessionReplay() {
 
   const addMessage = (sessionId: string, type: "input" | "output") => {
     const newMessage: Message = {
-      id: `${Date.now()}-${type}`,
-      type,
+      id: `msg-${Date.now()}`,
+      type: type,
+      role: type === 'input' ? 'user' : 'assistant',
       content: "",
       isEditing: true,
     }
@@ -215,15 +326,151 @@ export default function SessionReplay() {
     }))
   }
 
-  const sendSessionMessage = (sessionId: string) => {
+  const sendSessionMessage = async (sessionId: string) => {
     const message = sessionInputs[sessionId] || ""
     if (!message.trim()) return
 
-    // Add your send logic here
-    console.log(`Sending message for session ${sessionId}:`, message)
+    const tempMessageId = `temp-${Date.now()}`
+    const session = sessions[sessionId]
+    
+    console.log(`[${new Date().toISOString()}] Sending message to session ${sessionId}:`, {
+      message,
+      sessionConfig: session.config,
+      existingMessages: session.messages.length
+    })
+    
+    // Add the user's message with 'sending' status
+    setSessions(prev => ({
+      ...prev,
+      [sessionId]: {
+        ...prev[sessionId],
+        isSending: true,
+        messages: [
+          ...prev[sessionId].messages,
+          {
+            id: tempMessageId,
+            type: "input" as const,
+            role: 'user' as const,
+            content: message,
+            status: 'sending' as const,
+            timestamp: Date.now() / 1000, // Convert to seconds to match other timestamps
+          }
+        ]
+      }
+    }))
 
-    // Clear the input after sending
+    // Clear the input
     updateSessionInput(sessionId, "")
+
+
+    try {
+      if (!configData) {
+        throw new Error('Configuration not loaded')
+      }
+
+      console.log(`[${new Date().toISOString()}] Processing message through agent flow...`)
+      
+      // Process the message through the agent flow
+      const agentResponses = await processMessageThroughAgents(
+        message,
+        {
+          agents: configData.agents || [],
+          connections: configData.connections || [],
+          prompts: configData.prompts || []
+        },
+        session.messages
+      )
+      
+      console.log(`[${new Date().toISOString()}] Agent responses:`, agentResponses)
+      
+      // If no responses were generated, add a default response
+      if (agentResponses.length === 0) {
+        agentResponses.push({
+          content: "I'm sorry, I couldn't generate a response. Please try again.",
+          metadata: {
+            agent: 'System',
+            model: 'unknown',
+            processingTime: 0,
+            timestamp: new Date().toISOString(),
+            error: 'No response generated by any agent'
+          }
+        })
+      }
+      
+      // Update the UI with all agent responses
+      setSessions(prev => {
+        const session = prev[sessionId]
+        if (!session) {
+          console.error(`[${new Date().toISOString()}] Session ${sessionId} not found`)
+          return prev
+        }
+
+        // Update the user's message status to 'sent'
+        const updatedMessages = session.messages.map(msg => 
+          msg.id === tempMessageId 
+            ? { ...msg, status: 'sent' as const }
+            : msg
+        )
+
+        // Add all agent responses
+        const responseMessages: Message[] = agentResponses.map((response, index) => {
+          const status = response.metadata.error ? 'error' : 'sent' as const
+          const error = response.metadata.error
+          
+          const newMessage: Message = {
+            id: `msg-${Date.now()}`,
+            type: "output",
+            role: 'assistant',
+            content: response.content,
+            status: response.metadata?.error ? "error" : "sent",
+            error: response.metadata?.error,
+            timestamp: Date.now() / 1000, // Convert to seconds to match other timestamps
+            metadata: {
+              agent: response.metadata.agent,
+              model: response.metadata.model,
+              processingTime: response.metadata.processingTime,
+              ...(response.metadata.finishReason && { finishReason: response.metadata.finishReason }),
+              ...(response.metadata.usage && { usage: response.metadata.usage }),
+              ...(response.metadata.error && { error: response.metadata.error }),
+            },
+          }
+
+          return newMessage
+        })
+
+        console.log(`[${new Date().toISOString()}] Updated UI with ${responseMessages.length} agent responses`)
+
+        return {
+          ...prev,
+          [sessionId]: {
+            ...session,
+            isSending: false,
+            messages: [...updatedMessages, ...responseMessages],
+          },
+        }
+      })
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error in agent flow:`, error)
+      
+      // Update the message status to error
+      setSessions(prev => ({
+        ...prev,
+        [sessionId]: {
+          ...prev[sessionId],
+          isSending: false,
+          messages: prev[sessionId].messages.map(msg => 
+            msg.id === tempMessageId
+              ? { 
+                  ...msg, 
+                  status: 'error' as const,
+                  error: error instanceof Error ? error.message : 'Error processing message',
+                  timestamp: Date.now()
+                }
+              : msg
+          ),
+        },
+      }))
+    }
   }
 
   const sendSharedMessage = () => {
@@ -252,12 +499,35 @@ export default function SessionReplay() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="relative flex items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={Object.keys(sessions).length >= 5}
-                onClick={() => {
-                  const sessionId = Object.keys(sessions)[0] || Date.now().toString()
+            <Select
+              value={selectedVersion}
+              onValueChange={setSelectedVersion}
+            >
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center gap-1">
+                  <IconGitBranch size={16} />
+                  <span className="font-medium">{selectedVersion}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {availableVersions.map((version) => (
+                  <SelectItem key={version.version} value={version.version}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{version.version}</span>
+                      <span className="text-muted-foreground text-xs truncate">
+                        {version.commit_message}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={Object.keys(sessions).length >= 5}
+              onClick={() => {
+                const sessionId = Object.keys(sessions)[0] || Date.now().toString()
                   cloneSession(sessionId)
                 }}
                 className={cn(
@@ -274,12 +544,12 @@ export default function SessionReplay() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-muted-foreground/60"></span>
                   </span>
                 )}
-              </Button>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
+            </Button>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 ml-1 text-muted-foreground hover:text-foreground"
@@ -365,6 +635,7 @@ export default function SessionReplay() {
                       onChange={(value) => updateSessionInput(session.id, value)}
                       onSend={() => sendSessionMessage(session.id)}
                       placeholder={`Message for ${session.id}...`}
+                      isSending={session.isSending || false}
                     />
                   </div>
                 )}

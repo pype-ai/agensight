@@ -1,6 +1,8 @@
 "use client"
 
-import { Plus, X, Trash2, Edit3, Check, RotateCcw, Copy, Settings } from "lucide-react"
+import { Plus, X, Trash2, Edit3, Check, RotateCcw, Copy, Settings, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { MessageStatus } from "@/components/chat/MessageStatus"
 import { SettingsPanel } from "./SettingsPanel"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +24,14 @@ export interface Message {
   type: "input" | "output"
   content: string
   isEditing?: boolean
+  status?: 'sending' | 'sent' | 'error'
+  error?: string
+  timestamp?: number
+  metadata?: {
+    processingTime?: number
+    agent?: string
+    [key: string]: any
+  };
 }
 
 export interface Session {
@@ -142,20 +152,20 @@ export const SessionChat = ({
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
               <option value="gpt-3.5-turbo-16k">GPT-3.5 Turbo 16K</option>
             </optgroup>
-            <optgroup label="OpenAI">
+            {/* <optgroup label="OpenAI">
               <option value="dall-e-3">DALL·E 3</option>
               <option value="whisper-1">Whisper</option>
               <option value="tts-1">TTS-1</option>
-            </optgroup>
-            <optgroup label="Anthropic">
+            </optgroup> */}
+            {/* <optgroup label="Anthropic">
               <option value="claude-3-opus">Claude 3 Opus</option>
               <option value="claude-3-sonnet">Claude 3 Sonnet</option>
               <option value="claude-3-haiku">Claude 3 Haiku</option>
-            </optgroup>
-            <optgroup label="Google">
+            </optgroup> */}
+            {/* <optgroup label="Google">
               <option value="gemini-pro">Gemini Pro</option>
               <option value="gemini-ultra">Gemini Ultra</option>
-            </optgroup>
+            </optgroup> */}
           </select>
           {/* Message type selector and add button */}
           <div className="flex items-center gap-1 border rounded-md overflow-hidden">
@@ -191,13 +201,47 @@ export const SessionChat = ({
               <div key={message.id} className="relative group">
                 <div className={`flex ${message.type === "input" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] ${message.type === "input" ? "order-2" : "order-1"}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${message.type === "input" ? "bg-blue-900/30 text-blue-300" : "bg-slate-700 text-slate-300"}`}
-                      >
-                        {message.type === "input" ? "User" : "Assistant"}
-                      </Badge>
+                    <div className={`flex items-center gap-2 mb-1 flex-wrap`}>
+                      <div className="flex items-center gap-1">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-xs",
+                            message.type === "input"
+                              ? "bg-blue-900/30 text-blue-300"
+                              : "bg-slate-700 text-slate-300"
+                          )}
+                        >
+                          {message.type === "input" ? "You" : "Assistant"}
+                          {message.status && (
+                            <MessageStatus
+                              status={message.status}
+                              error={message.error}
+                              className="ml-1"
+                            />
+                          )}
+                        </Badge>
+                        {message.metadata?.processingTime && (
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round(message.metadata.processingTime * 1000)}ms
+                          </span>
+                        )}
+                        {message.timestamp && (
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(message.timestamp).toLocaleTimeString()}
+                          </span>
+                        )}
+                      </div>
+                      {message.metadata?.model && (
+                        <Badge variant="outline" className="text-xs">
+                          {message.metadata.model}
+                        </Badge>
+                      )}
+                      {message.error && (
+                        <div className="text-xs text-red-500">
+                          Error: {message.error}
+                        </div>
+                      )}
                       <div className="flex gap-1">
                         {idx === session.messages.length - 1 && (
                           <Button
