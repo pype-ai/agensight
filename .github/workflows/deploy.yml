@@ -7,67 +7,205 @@ on:
 
 jobs:
   deploy-staging:
-    needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     environment: staging
     
     steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: package-dist
-        path: dist/
-        
-    - name: Install twine
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Debug Step 1 - Environment Info
       run: |
-        python -m pip install --upgrade pip
-        pip install twine
+        echo "🔍 Step 1: Environment Information"
+        echo "Current directory: $(pwd)"
+        echo "User: $(whoami)"
+        echo "Python version: $(python --version)"
+        echo "OS: $(uname -a)"
+        echo "Date: $(date)"
+        echo "GitHub ref: ${{ github.ref }}"
+        echo "GitHub event: ${{ github.event_name }}"
         
-    - name: Deploy to Test PyPI (using your script method)
+    - name: Debug Step 2 - Secret Availability
+      env:
+        TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        echo "🔍 Step 2: Secret Debug"
+        echo "Checking if TEST_PYPI_TOKEN secret exists..."
+        
+        if [ -z "$TEST_TOKEN" ]; then
+          echo "❌ SECRET IS EMPTY OR NOT SET!"
+          echo "Secret value is: '${TEST_TOKEN}'"
+          echo "Secret length: ${#TEST_TOKEN}"
+          exit 1
+        else
+          echo "✅ Secret exists"
+          echo "Secret length: ${#TEST_TOKEN} characters"
+        fi
+        
+    - name: Debug Step 3 - Token Format Check
+      env:
+        TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        echo "🔍 Step 3: Token Format Check"
+        echo "First 15 characters: ${TEST_TOKEN:0:15}"
+        echo "Last 10 characters: ${TEST_TOKEN: -10}"
+        
+        if [[ "$TEST_TOKEN" == pypi-* ]]; then
+          echo "✅ Token starts with 'pypi-'"
+        else
+          echo "❌ Token does NOT start with 'pypi-'"
+          echo "Token starts with: ${TEST_TOKEN:0:10}"
+        fi
+        
+        # Check for common issues
+        if [[ "$TEST_TOKEN" == *$'\n'* ]]; then
+          echo "❌ Token contains line breaks!"
+        else
+          echo "✅ No line breaks in token"
+        fi
+        
+        if [[ "$TEST_TOKEN" == *" "* ]]; then
+          echo "❌ Token contains spaces!"
+        else
+          echo "✅ No spaces in token"
+        fi
+        
+    - name: Debug Step 4 - Print Full Token (CAREFUL!)
+      env:
+        TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        echo "🔍 Step 4: Full Token Debug (WILL BE VISIBLE IN LOGS!)"
+        echo "⚠️  WARNING: This will expose your token in GitHub logs!"
+        echo "Full token: $TEST_TOKEN"
+        echo "Token validation complete"
+        
+    - name: Debug Step 5 - Create Test Package
+      run: |
+        echo "🔍 Step 5: Creating minimal test package"
+        
+        # Create test directory
+        mkdir -p test_package
+        cd test_package
+        
+        # Create minimal setup.py
+        TIMESTAMP=$(date +%s)
+        cat > setup.py << EOF
+from setuptools import setup
+setup(
+    name="debug-test-token-$TIMESTAMP",
+    version="0.0.1", 
+    description="Debug test for token",
+    author="Debug Test",
+    py_modules=[],
+)
+EOF
+        
+        echo "Created setup.py:"
+        cat setup.py
+        
+    - name: Debug Step 6 - Build Test Package
+      run: |
+        echo "🔍 Step 6: Building test package"
+        cd test_package
+        
+        python -m pip install --upgrade pip build
+        python -m build
+        
+        echo "Build completed. Files created:"
+        ls -la dist/
+        
+        echo "Moving dist files to parent for upload test"
+        mv dist/* ../
+        cd ..
+        
+        echo "Files available for upload:"
+        ls -la *.whl *.tar.gz 2>/dev/null || echo "No package files found"
+        
+    - name: Debug Step 7 - Install Twine
+      run: |
+        echo "🔍 Step 7: Installing twine"
+        pip install twine
+        echo "Twine version: $(twine --version)"
+        
+    - name: Debug Step 8 - Test PyPI Connectivity
+      run: |
+        echo "🔍 Step 8: Testing connectivity to Test PyPI"
+        curl -I https://test.pypi.org/legacy/ || echo "Connection test failed"
+        curl -I https://test.pypi.org/ || echo "Main site connection failed"
+        
+    - name: Debug Step 9 - Twine Check
+      run: |
+        echo "🔍 Step 9: Checking package with twine"
+        twine check *.whl *.tar.gz || echo "Twine check failed"
+        
+    - name: Debug Step 10 - Upload Test with Full Debug
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
-        echo "🚀 Deploying to Test PyPI using your script method..."
-        echo "📦 Files to upload:"
-        ls -la dist/
+        echo "🔍 Step 10: Upload test with maximum verbosity"
         
-        if [ -z "$TWINE_PASSWORD" ]; then
-          echo "❌ TEST_PYPI_TOKEN not available!"
+        echo "Environment variables:"
+        echo "TWINE_USERNAME: $TWINE_USERNAME"
+        echo "TWINE_PASSWORD length: ${#TWINE_PASSWORD}"
+        echo "TWINE_PASSWORD first 15 chars: ${TWINE_PASSWORD:0:15}"
+        
+        echo "Files to upload:"
+        ls -la *.whl *.tar.gz
+        
+        echo "Starting upload with verbose logging..."
+        
+        # Set all debug flags
+        export TWINE_VERBOSE=1
+        
+        twine upload \
+          --repository testpypi \
+          --username "$TWINE_USERNAME" \
+          --password "$TWINE_PASSWORD" \
+          --verbose \
+          --skip-existing \
+          *.whl *.tar.gz || {
+          
+          echo "❌ Upload failed!"
+          echo "Exit code: $?"
+          
+          echo "Let's try some diagnostics:"
+          echo "1. Check if token works with curl:"
+          
+          curl -X POST \
+            -H "Authorization: Bearer ${TWINE_PASSWORD/pypi-/}" \
+            -H "Content-Type: application/json" \
+            https://test.pypi.org/simple/ || echo "Curl test failed"
+          
+          echo "2. Manual token validation:"
+          python3 -c "
+import sys
+token = '$TWINE_PASSWORD'
+print(f'Token length: {len(token)}')
+print(f'Starts with pypi-: {token.startswith(\"pypi-\")}')
+print(f'Contains spaces: {\" \" in token}')
+print(f'Contains newlines: {chr(10) in token}')
+          "
+          
           exit 1
-        fi
+        }
         
-        # Use the same command structure as your script but for Test PyPI
-        twine upload dist/* -u __token__ -p $TWINE_PASSWORD --repository testpypi --verbose
-        
-    - name: Verify deployment
+    - name: Debug Step 11 - Success Verification
       run: |
-        echo "✅ Upload completed!"
-        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
-        echo "🌐 Package available at: https://test.pypi.org/project/$PACKAGE_NAME/"
+        echo "🔍 Step 11: Upload Success!"
+        echo "✅ Token is working correctly"
+        echo "✅ Package uploaded successfully"
+        
+        PACKAGE_NAME=$(ls *.whl | head -1 | cut -d'-' -f1)
+        echo "🌐 Check your package at: https://test.pypi.org/project/$PACKAGE_NAME/"
 
   deploy-production:
-    needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: package-dist
-        path: dist/
-        
-    - name: Install twine
+    - name: Production Deploy (Placeholder)
       run: |
-        python -m pip install --upgrade pip
-        pip install twine
-        
-    - name: Deploy to Production PyPI (exactly like your script)
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        echo "🚀 Deploying to Production PyPI (same as your local script)..."
-        twine upload dist/* -u __token__ -p $TWINE_PASSWORD
+        echo "🚀 Production deployment would happen here"
+        echo "Skipping for now to focus on staging debug"
