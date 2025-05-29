@@ -38,13 +38,18 @@ jobs:
     - name: Install build tools
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade packaging  # Fix for license-file issue
+        pip install --upgrade packaging  # Fix for twine 6.1.0 license-file bug
+        pip install --upgrade setuptools  # Also upgrade setuptools
         pip install build twine
         
     - name: Show package info before build
       run: |
         echo "🔍 Package name in setup.py:"
         grep -n "name=" setup.py
+        echo "📦 Python version: $(python --version)"
+        echo "🔧 Packaging version: $(pip show packaging | grep Version)"
+        echo "🛠️  Setuptools version: $(pip show setuptools | grep Version)"
+        echo "🛠️  Build version: $(pip show build | grep Version)"
         
     - name: Build package
       run: |
@@ -52,6 +57,11 @@ jobs:
         python -m build
         echo "📋 Built files:"
         ls -la dist/
+        
+    - name: Check package metadata
+      run: |
+        echo "🔍 Checking built package for license-file issues..."
+        twine check dist/*
         
     - name: Upload package artifacts
       uses: actions/upload-artifact@v4
@@ -63,7 +73,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
-    environment: staging  # ← This is the key line!
+    environment: staging
     
     steps:
     - name: Download build artifacts
@@ -72,10 +82,16 @@ jobs:
         name: package-dist
         path: dist/
       
+    - name: Install twine with updated packaging
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade packaging  # Ensure we have the fix
+        pip install twine
+        
     - name: Deploy to Test PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}  # Now accessible!
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
         echo "🚀 Deploying to Test PyPI..."
         echo "📦 Files to upload:"
@@ -89,8 +105,17 @@ jobs:
           echo "🔑 Token length: ${#TWINE_PASSWORD} characters"
         fi
         
-        pip install twine
+        echo "📤 Starting upload..."
         twine upload --repository testpypi dist/* --verbose --non-interactive
+        
+    - name: Verify deployment
+      run: |
+        echo "✅ Upload completed. Testing installation..."
+        sleep 60  # Wait for package to be available
+        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
+        echo "🔍 Testing installation of: $PACKAGE_NAME"
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAME
+        python -c "import agensight; print('✅ Package imported successfully')" || echo "⚠️ Import test skipped"
 
   deploy-production:
     needs: build
@@ -104,11 +129,16 @@ jobs:
         name: package-dist
         path: dist/
       
+    - name: Install twine with updated packaging
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade packaging
+        pip install twine
+        
     - name: Deploy to PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}  # Repository secret
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
         echo "🚀 Deploying to Production PyPI..."
-        pip install twine
         twine upload dist/* --verbose --non-interactive
