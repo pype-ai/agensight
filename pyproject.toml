@@ -16,7 +16,7 @@ agensight = [
 
 [project]
 name = "agensight"
-version = "1.1.6"
+version = "0.5.5"
 description = "A Python SDK for logging and visualizing OpenAI agent interactions"
 authors = [{name = "Pype", email = "deepesh@pypeai.com"}]
 license = {text = "MIT"}
