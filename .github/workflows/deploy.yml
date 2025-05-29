@@ -42,184 +42,82 @@ jobs:
       with:
         name: package-dist
         path: dist/
-      
+        
     - name: Debug Step 1 - Environment Info
       run: |
         echo "🔍 Step 1: Environment Information"
         echo "Current directory: $(pwd)"
-        echo "User: $(whoami)"
         echo "Python version: $(python --version)"
-        echo "OS: $(uname -a)"
-        echo "Date: $(date)"
         echo "GitHub ref: ${{ github.ref }}"
-        echo "GitHub event: ${{ github.event_name }}"
         
-    - name: Debug Step 2 - Secret Availability
+    - name: Debug Step 2 - Secret Check
       env:
         TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
         echo "🔍 Step 2: Secret Debug"
-        echo "Checking if TEST_PYPI_TOKEN secret exists..."
-        
         if [ -z "$TEST_TOKEN" ]; then
-          echo "❌ SECRET IS EMPTY OR NOT SET!"
-          echo "Secret value is: '${TEST_TOKEN}'"
-          echo "Secret length: ${#TEST_TOKEN}"
+          echo "❌ SECRET IS EMPTY!"
           exit 1
         else
           echo "✅ Secret exists"
           echo "Secret length: ${#TEST_TOKEN} characters"
         fi
         
-    - name: Debug Step 3 - Token Format Check
+    - name: Debug Step 3 - Token Format
       env:
         TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
         echo "🔍 Step 3: Token Format Check"
         echo "First 15 characters: ${TEST_TOKEN:0:15}"
-        echo "Last 10 characters: ${TEST_TOKEN: -10}"
         
         if [[ "$TEST_TOKEN" == pypi-* ]]; then
           echo "✅ Token starts with 'pypi-'"
         else
           echo "❌ Token does NOT start with 'pypi-'"
-          echo "Token starts with: ${TEST_TOKEN:0:10}"
         fi
         
-        # Check for common issues
-        if [[ "$TEST_TOKEN" == *$'\n'* ]]; then
-          echo "❌ Token contains line breaks!"
-        else
-          echo "✅ No line breaks in token"
-        fi
-        
-        if [[ "$TEST_TOKEN" == *" "* ]]; then
-          echo "❌ Token contains spaces!"
-        else
-          echo "✅ No spaces in token"
-        fi
-        
-    - name: Debug Step 4 - Print Full Token (CAREFUL!)
+    - name: Debug Step 4 - SHOW FULL TOKEN
       env:
         TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
-        echo "🔍 Step 4: Full Token Debug (WILL BE VISIBLE IN LOGS!)"
-        echo "⚠️  WARNING: This will expose your token in GitHub logs!"
+        echo "🔍 Step 4: FULL TOKEN (VISIBLE IN LOGS!)"
         echo "Full token: $TEST_TOKEN"
-        echo "Token validation complete"
         
-    - name: Debug Step 5 - Check Downloaded Package
+    - name: Debug Step 5 - Package Files
       run: |
-        echo "🔍 Step 5: Checking downloaded package files"
-        echo "Current directory: $(pwd)"
-        echo "Files in current directory:"
-        ls -la
-        echo "Files in dist directory:"
-        ls -la dist/ || echo "No dist directory"
-        
-        if [ -f dist/*.whl ] 2>/dev/null; then
-          echo "✅ Found wheel files"
-          ls -la dist/*.whl
-        else
-          echo "❌ No wheel files found"
-        fi
-        
-    - name: Debug Step 6 - Prepare Package Files
-      run: |
-        echo "🔍 Step 6: Preparing package files for upload"
-        echo "Available package files:"
+        echo "🔍 Step 5: Package files"
+        echo "Files in dist:"
         ls -la dist/
         
-        # Copy files to current directory for easier access
-        cp dist/* . 2>/dev/null || echo "No files to copy"
-        
-        echo "Files ready for upload:"
-        ls -la *.whl *.tar.gz 2>/dev/null || echo "No package files found"
-        
-    - name: Debug Step 7 - Install Twine
+    - name: Debug Step 6 - Install Twine
       run: |
-        echo "🔍 Step 7: Installing twine"
+        echo "🔍 Step 6: Installing twine"
         pip install twine
-        echo "Twine version: $(twine --version)"
         
-    - name: Debug Step 8 - Test PyPI Connectivity
-      run: |
-        echo "🔍 Step 8: Testing connectivity to Test PyPI"
-        curl -I https://test.pypi.org/legacy/ || echo "Connection test failed"
-        curl -I https://test.pypi.org/ || echo "Main site connection failed"
-        
-    - name: Debug Step 9 - Twine Check
-      run: |
-        echo "🔍 Step 9: Checking package with twine"
-        twine check *.whl *.tar.gz || echo "Twine check failed"
-        
-    - name: Debug Step 10 - Upload Test with Full Debug
+    - name: Debug Step 7 - Upload Test
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
-        echo "🔍 Step 10: Upload test with maximum verbosity"
-        
-        echo "Environment variables:"
+        echo "🔍 Step 7: Upload attempt"
         echo "TWINE_USERNAME: $TWINE_USERNAME"
         echo "TWINE_PASSWORD length: ${#TWINE_PASSWORD}"
-        echo "TWINE_PASSWORD first 15 chars: ${TWINE_PASSWORD:0:15}"
         
-        echo "Files to upload:"
-        ls -la dist/
-        
-        echo "Starting upload with verbose logging..."
-        
-        # Set all debug flags
-        export TWINE_VERBOSE=1
-        
-        twine upload \
-          --repository testpypi \
-          --username "$TWINE_USERNAME" \
-          --password "$TWINE_PASSWORD" \
-          --verbose \
-          --skip-existing \
-          dist/* || {
-          
+        echo "Attempting upload..."
+        twine upload --repository testpypi dist/* --verbose || {
           echo "❌ Upload failed!"
-          echo "Exit code: $?"
-          
-          echo "Let's try some diagnostics:"
-          echo "1. Check if token works with curl:"
-          
-          curl -X POST \
-            -H "Authorization: Bearer ${TWINE_PASSWORD/pypi-/}" \
-            -H "Content-Type: application/json" \
-            https://test.pypi.org/simple/ || echo "Curl test failed"
-          
-          echo "2. Manual token validation:"
-          python3 -c "
-import sys
-token = '$TWINE_PASSWORD'
-print(f'Token length: {len(token)}')
-print(f'Starts with pypi-: {token.startswith(\"pypi-\")}')
-print(f'Contains spaces: {\" \" in token}')
-print(f'Contains newlines: {chr(10) in token}')
-          "
-          
+          echo "Token starts with: ${TWINE_PASSWORD:0:15}"
           exit 1
         }
         
-    - name: Debug Step 11 - Success Verification
+    - name: Success
       run: |
-        echo "🔍 Step 11: Upload Success!"
-        echo "✅ Token is working correctly"
-        echo "✅ Package uploaded successfully"
-        
-        PACKAGE_NAME=$(ls dist/*.whl | head -1 | xargs basename | cut -d'-' -f1)
-        echo "🌐 Check your package at: https://test.pypi.org/project/$PACKAGE_NAME/"
+        echo "✅ SUCCESS! Token is working!"
 
   deploy-production:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - name: Production Deploy (Placeholder)
-      run: |
-        echo "🚀 Production deployment would happen here"
-        echo "Skipping for now to focus on staging debug"
+    - name: Production placeholder
+      run: echo "Production deploy would happen here"
