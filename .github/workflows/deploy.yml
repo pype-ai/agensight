@@ -106,7 +106,15 @@ jobs:
         fi
         
         echo "📤 Starting upload..."
-        twine upload --repository testpypi dist/* --verbose --non-interactive
+        # Add --verbose to see the exact error response
+        twine upload --repository testpypi dist/* --verbose --non-interactive || {
+          echo "❌ Upload failed. Common causes:"
+          echo "1. Package name 'agensight-dev' already exists and you don't own it"
+          echo "2. Version '0.5.4' already uploaded"
+          echo "3. Token doesn't have upload permissions"
+          echo "💡 Try changing the package name to something unique like 'test-agensight-$(date +%s)'"
+          exit 1
+        }
         
     - name: Verify deployment
       run: |
