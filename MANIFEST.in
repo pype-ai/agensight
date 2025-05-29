@@ -1,1 +1,57 @@
+# Include UI build files
 recursive-include agensight/_ui/out *
+recursive-include agensight/_ui/build *
+recursive-include agensight/_ui/dist *
+
+# Include documentation
+include README.md
+include readme.sdk.md
+include LICENSE
+include CHANGELOG.md
+
+# Include configuration files
+include pyproject.toml
+include requirements.txt
+include .env.example
+
+# Include templates and static files
+recursive-include agensight/templates *
+recursive-include agensight/static *
+
+# Include CLI related files
+recursive-include cli *
+
+# Include any data files
+recursive-include agensight/data *
+
+# Exclude unnecessary files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*
+global-exclude .env
+
+# Exclude development files
+exclude .gitignore
+exclude .pre-commit-config.yaml
+exclude tox.ini
+exclude Makefile
+exclude docker-compose.yml
+exclude Dockerfile*
+
+# Exclude test files from distribution
+recursive-exclude tests *
+recursive-exclude */tests *
+exclude conftest.py
+
+# Exclude UI source files (keep only built files)
+recursive-exclude agensight/_ui/src *
+recursive-exclude agensight/_ui/public *
+recursive-exclude agensight/_ui/node_modules *
+exclude agensight/_ui/package.json
+exclude agensight/_ui/package-lock.json
+exclude agensight/_ui/.gitignore
+exclude agensight/_ui/README.md

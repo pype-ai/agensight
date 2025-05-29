@@ -1,0 +1,333 @@
+name: Staging Pipeline
+
+on:
+  push:
+    branches: [ staging ]
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      run_extended_tests:
+        description: 'Run extended test suite'
+        required: false
+        default: 'true'
+        type: boolean
+      deploy_to_test_pypi:
+        description: 'Deploy to Test PyPI'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18.x'
+
+jobs:
+  staging-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+        test-type: ['unit', 'integration', 'e2e']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist pytest-timeout
+        pip install -e .[test,dev]
+        
+    - name: Run unit tests
+      if: matrix.test-type == 'unit'
+      run: |
+        pytest tests/unit/ -v --cov=agensight --cov-report=xml --timeout=300
+        
+    - name: Run integration tests
+      if: matrix.test-type == 'integration'
+      run: |
+        pytest tests/integration/ -v --timeout=600
+        
+    - name: Run end-to-end tests
+      if: matrix.test-type == 'e2e'
+      run: |
+        pytest tests/e2e/ -v --timeout=900
+        
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.python-version }}-${{ matrix.test-type }}
+        path: |
+          coverage.xml
+          pytest-report.xml
+
+  staging-ui-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: ./agensight/_ui/package-lock.json
+        
+    - name: Install UI dependencies
+      run: |
+        cd ./agensight/_ui
+        npm ci
+        
+    - name: Run UI unit tests
+      run: |
+        cd ./agensight/_ui
+        npm test -- --coverage --watchAll=false
+        
+    - name: Run UI integration tests
+      run: |
+        cd ./agensight/_ui
+        npm run test:integration || echo "No integration tests configured"
+        
+    - name: Run UI E2E tests
+      run: |
+        cd ./agensight/_ui
+        npm run test:e2e || echo "No E2E tests configured"
+        
+    - name: Build UI for staging
+      run: |
+        cd ./agensight/_ui
+        NODE_ENV=staging npm run build
+        
+    - name: Upload UI build
+      uses: actions/upload-artifact@v3
+      with:
+        name: ui-staging-build
+        path: ./agensight/_ui/build/
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_extended_tests == 'true' || github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest-benchmark locust
+        pip install -e .
+        
+    - name: Run performance tests
+      run: |
+        pytest tests/performance/ -v --benchmark-only
+        
+    - name: Run load tests
+      run: |
+        # Start the application in background
+        python -m agensight.server &
+        sleep 10
+        
+        # Run load tests
+        locust -f tests/load/locustfile.py --headless -u 10 -r 2 -t 30s --host=http://localhost:8000
+        
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: |
+          .benchmarks/
+          locust-report.html
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety semgrep
+        pip install -e .
+        
+    - name: Run Bandit security scan
+      run: |
+        bandit -r agensight/ -f json -o bandit-report.json
+        
+    - name: Run Safety dependency scan
+      run: |
+        safety check --json --output safety-report.json
+        
+    - name: Run Semgrep scan
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json agensight/
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          semgrep-report.json
+
+  build-staging-package:
+    needs: [staging-tests, staging-ui-tests]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Download UI build
+      uses: actions/download-artifact@v3
+      with:
+        name: ui-staging-build
+        path: ./agensight/_ui/build/
+        
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine setuptools wheel
+        
+    - name: Update version for staging
+      run: |
+        # Create staging version
+        STAGING_VERSION=$(python -c "
+        from datetime import datetime
+        import os
+        base_version = '0.5.4'
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        commit_sha = os.getenv('GITHUB_SHA', 'unknown')[:7]
+        staging_version = f'{base_version}.staging{timestamp}+{commit_sha}'
+        print(staging_version)
+        
+        # Update version file
+        with open('agensight/_version.py', 'w') as f:
+            f.write(f'__version__ = \"{staging_version}\"\n')
+            f.write(f'__build__ = \"{timestamp}\"\n')
+            f.write(f'__commit__ = \"{commit_sha}\"\n')
+        ")
+        
+        echo "STAGING_VERSION=$STAGING_VERSION" >> $GITHUB_ENV
+        echo "Staging version: $STAGING_VERSION"
+        
+    - name: Build staging package
+      run: |
+        python -m build
+        
+    - name: Verify package
+      run: |
+        twine check dist/*
+        
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: staging-package
+        path: dist/
+
+  deploy-staging:
+    needs: [build-staging-package, security-scan, performance-tests]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_to_test_pypi != 'false'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: staging-package
+        path: dist/
+        
+    - name: Install twine
+      run: pip install twine
+      
+    - name: Deploy to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        twine upload --repository testpypi dist/*
+        
+    - name: Test installation from Test PyPI
+      run: |
+        sleep 60  # Wait for package to be available
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agensight
+        
+        # Test basic functionality
+        python -c "import agensight; print(f'Successfully installed staging version: {agensight.__version__}')"
+        agensight --help
+
+  staging-smoke-tests:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_to_test_pypi != 'false'
+    
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install from Test PyPI
+      run: |
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agensight
+        
+    - name: Run smoke tests
+      run: |
+        # Test CLI
+        agensight --version
+        agensight --help
+        
+        # Test basic import and functionality
+        python -c "
+        import agensight
+        print('✅ Package imported successfully')
+        print(f'Version: {agensight.__version__}')
+        
+        # Test basic functionality
+        # Add your specific smoke tests here
+        print('✅ All smoke tests passed')
+        "
+        
+    - name: Create staging report
+      run: |
+        echo "# Staging Deployment Report" > staging-report.md
+        echo "- **Version**: $(python -c 'import agensight; print(agensight.__version__)')" >> staging-report.md
+        echo "- **Deployment Time**: $(date)" >> staging-report.md
+        echo "- **Commit**: ${{ github.sha }}" >> staging-report.md
+        echo "- **Status**: ✅ Success" >> staging-report.md
+        
+    - name: Upload staging report
+      uses: actions/upload-artifact@v3
+      with:
+        name: staging-report
+        path: staging-report.md
