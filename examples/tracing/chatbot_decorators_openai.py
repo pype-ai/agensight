@@ -5,7 +5,7 @@ from agensight.tracing.decorators import trace, span
 
 # Init tracing and instrumentation
 
-agensight.init(name="chatbot-with-tools", mode="local", project_id="abc12345")
+agensight.init(name="chatbot-with-tools", mode="prod", project_id="abc12345")
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 

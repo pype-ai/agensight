@@ -7,6 +7,7 @@ from opentelemetry.trace import SpanKind
 from agensight.tracing.db import get_db
 from agensight.tracing.utils import transform_trace_to_agent_view
 import sqlite3
+import json
 
 from ..data_source import data_source
 from ..models import SpanDetails
@@ -144,14 +145,31 @@ def get_structured_trace(trace_id: str):
             rowid = span["rowid"]
             kind = span.get("kind")
 
-            # Walk backward if INTERNAL to find the closest previous span with data
             if kind == str(SpanKind.INTERNAL):
                 logger.info(f"🔁 INTERNAL span → Checking previous row for span ID {original_span_id}")
-                prev_span_row = conn.execute("SELECT * FROM spans WHERE rowid < ? ORDER BY rowid DESC LIMIT 1", (rowid,)).fetchone()
+                prev_span_row = conn.execute(
+                    "SELECT * FROM spans WHERE rowid < ? ORDER BY rowid DESC LIMIT 1", (rowid,)
+                ).fetchone()
                 if prev_span_row:
                     prev_span_id = prev_span_row["id"]
+                    spans[idx]["id"] = prev_span_id  # ✅ Replace early
                     logger.info(f"   ↪ Replacing span ID {original_span_id} with previous span ID {prev_span_id}")
-                    span_id_replacements[original_span_id] = prev_span_id
+
+                    # Extract model
+                    try:
+                        prev_attrs = json.loads(prev_span_row["attributes"])
+                        model = (
+                            prev_attrs.get("gen_ai.request.model") or
+                            prev_attrs.get("gen_ai.anthropic.model") or
+                            prev_attrs.get("gen_ai.request.model_name") or
+                            "unknown"
+                        )
+                    except Exception:
+                        model = "unknown"
+
+                    logger.info(f"🧠 Model used for INTERNAL span {original_span_id} (from {prev_span_id}): {model}")
+                    span["model_used"] = model
+
 
         for span in spans:
             effective_span_id = span_id_replacements.get(span["id"], span["id"])
@@ -173,11 +191,4 @@ def get_structured_trace(trace_id: str):
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.exception(f"❌ Unexpected error in get_structured_trace")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-
-    except sqlite3.DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e))

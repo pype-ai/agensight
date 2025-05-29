@@ -23,6 +23,9 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            import requests
+            from agensight.tracing.config import get_project_id  # ensure this is imported
+
             trace_name = name or func.__name__
             trace_id = str(uuid.uuid4())
 
@@ -39,7 +42,31 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
                 enable_session_tracking()
                 set_session_id(session_id)
 
-                if get_mode() != "prod":
+                mode = get_mode()
+                if mode in ["prod", "dev"]:
+                    try:
+                        requests.post(
+                            "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
+                            headers={
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {get_project_id()}"
+                            },
+                            data=json.dumps({
+                                "data": {
+                                    "id": session_id,
+                                    "project_id": get_project_id(),
+                                    "started_at": time.time(),
+                                    "session_name": session_name,
+                                    "user_id": user_id,
+                                    "metadata": json.dumps({}),
+                                    "mode": mode
+                                }
+                            }),
+                            timeout=2
+                        )
+                    except Exception:
+                        pass
+                else:
                     try:
                         conn = get_db()
                         conn.execute(
@@ -75,6 +102,7 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
             return result
         return wrapper
     return decorator
+
 
 def _extract_usage_from_result(result: Any) -> Optional[Dict[str, int]]:
     if result is None:
