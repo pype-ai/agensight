@@ -69,7 +69,7 @@ def ensure_ui_built():
 ensure_ui_built()
 
 setup(
-    name="test-sdk-deploy-1748518084",
+    name="agensight",
     version=get_version(),
     author="Pype",
     author_email="deepesh@pypeai.com",

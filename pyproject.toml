@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 license-files = []  # This fixes the license-file issue
 
 [project]
-name = "test-sdk-deploy-1748518084"
+name = "agensight"
 version = "0.1.0"
 description = "A Python SDK for logging and visualizing OpenAI agent interactions"
 authors = [{name = "Pype", email = "deepesh@pypeai.com"}]
