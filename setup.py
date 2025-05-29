@@ -20,6 +20,7 @@ setup(
         "flask_cors",
         "fastapi",
         "uvicorn",
+        "ragas",
         "sqlalchemy",
         "pydantic",
         "starlette",
