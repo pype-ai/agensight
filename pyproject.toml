@@ -7,7 +7,7 @@ license-files = []  # This fixes the license-file issue
 
 [project]
 name = "agensight"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python SDK for logging and visualizing OpenAI agent interactions"
 authors = [{name = "Pype", email = "deepesh@pypeai.com"}]
 license = {text = "MIT"}
