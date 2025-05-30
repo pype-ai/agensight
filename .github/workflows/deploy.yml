@@ -23,46 +23,6 @@ jobs:
       with:
         node-version: '18.x'
         
-    - name: Build UI (if exists)
-      run: |
-        if [ -d "./agensight/_ui" ]; then
-          echo "🎨 Building UI..."
-          cd ./agensight/_ui
-          npm install
-          npm run build
-          cd ../..
-          echo "✅ UI build completed"
-        else
-          echo "ℹ️  No UI directory found, skipping UI build"
-        fi
-        
-    - name: Install build tools
-      run: |
-        echo "🔧 Installing build tools..."
-        python -m pip install --upgrade pip
-        pip install --upgrade setuptools wheel build twine
-        
-    - name: Clean build directories
-      run: |
-        echo "🧹 Cleaning build directories..."
-        rm -rf dist/* build/*
-        
-    - name: Build package
-      run: |
-        echo "📦 Building package..."
-        python -m build
-        echo "✅ Package build completed"
-        
-    - name: Show built packages
-      run: |
-        echo "📋 Built packages:"
-        ls -la dist/
-        
-    - name: Upload package artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: package-dist
-        path: dist/
 
   deploy-staging:
     needs: build
@@ -89,18 +49,29 @@ jobs:
         echo "🔧 Configuring SDK with DEV API URL..."
         cd dist
         
-        # Install wheel and ensure it's in PATH
+        # Install wheel
         python -m pip install --upgrade wheel
         
-        # Only unpack the wheel file (not the tar.gz)
-        python -m wheel unpack *.whl
+        # List files to debug
+        echo "Files in dist directory:"
+        ls -la
+        
+        # Get only the wheel file (exclude tar.gz)
+        WHEEL_FILE=$(ls | grep '\.whl$')
+        echo "Processing wheel file: $WHEEL_FILE"
+        
+        # Unpack only the wheel file
+        python -m wheel unpack "$WHEEL_FILE"
         
         # Replace placeholder with dev URL
         find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.DEV_API_URL }}|g' {} \;
         
-        # Repack wheel using python -m
+        # Repack wheel
         python -m wheel pack agensight-*
+        
+        # Clean up unpacked directory
         rm -rf agensight-*/
+        
         echo "✅ DEV URL configured"
         
     - name: Verify Test PyPI Token
