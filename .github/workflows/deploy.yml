@@ -178,7 +178,7 @@ jobs:
         echo "Python version: $(python --version)"
         echo "Deploying to production PyPI..."
 
-     - name: Configure Production API URL 
+    - name: Configure Production API URL 
       run: |
         echo "🚀 Configuring SDK with PRODUCTION API URL..."
         cd dist
