@@ -16,9 +16,9 @@ from agensight import init, trace, span
 
 # Initialize Agensight with prod mode and project ID
 init(
-    name="travel-assistant-pro",
+    name="travel-assistant-pro-plus",
     mode="prod",
-    project_id="773b7798"
+    token="ebc21a07b804c9ab7825"
 )
 
 api_key = os.getenv("OPENAI_API_KEY")
@@ -547,7 +547,6 @@ def create_travel_workflow():
        session={
            "id": f"travel_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
            "user_id": "342080c2-e99e-4e09-b171-681496de7c10",
-           "project_id": "11369202-0801-471f-8d83-01d7b7709be2",
            "name": "travel-assistant-professional"
        })
 def process_travel_consultation(app, state: State, user_input: str):
