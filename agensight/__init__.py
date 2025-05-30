@@ -8,10 +8,13 @@ from . import tracing
 from . import eval
 import json
 from .eval.setup import setup_eval
+from .config import get_api_config
+import os
 
 import json
 import time
 import requests
+
 
 def init(name="default", mode="local", auto_instrument_llms=True, session=None, project_id=None):
     set_mode(mode)
@@ -48,9 +51,9 @@ def init(name="default", mode="local", auto_instrument_llms=True, session=None, 
 
         if get_mode() in ["prod", "dev"]:
             try:
+                api_url = get_api_config(mode=get_mode()) + "/session"      
                 requests.post(
-                    "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create/session",
-                    # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
+                    api_url,
                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {project_id}" },
                     data=json.dumps({
                         "data": {

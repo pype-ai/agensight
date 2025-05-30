@@ -84,6 +84,20 @@ jobs:
         echo "Event: ${{ github.event_name }}"
         echo "Python version: $(python --version)"
         
+    - name: Configure Dev API URL
+      run: |
+        echo "🔧 Configuring SDK with DEV API URL..."
+        cd dist
+        pip install wheel
+        wheel unpack *.whl
+        
+        # Replace placeholder with dev URL
+        find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.DEV_API_URL }}|g' {} \;
+        
+        wheel pack agensight-*
+        rm -rf agensight-*/
+        echo "✅ DEV URL configured"
+        
     - name: Verify Test PyPI Token
       env:
         TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -163,6 +177,20 @@ jobs:
         echo "Event: ${{ github.event_name }}"
         echo "Python version: $(python --version)"
         echo "Deploying to production PyPI..."
+
+     - name: Configure Production API URL 
+      run: |
+        echo "🚀 Configuring SDK with PRODUCTION API URL..."
+        cd dist
+        pip install wheel
+        wheel unpack *.whl
+        
+        # Replace placeholder with production URL
+        find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.PROD_API_URL }}|g' {} \;
+        
+        wheel pack agensight-*
+        rm -rf agensight-*/
+        echo "✅ PRODUCTION URL configured"
         
     - name: Verify Production PyPI Token
       env:
