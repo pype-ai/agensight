@@ -103,10 +103,25 @@ jobs:
         # Unpack only the wheel file
         python -m wheel unpack "$WHEEL_FILE"
         
-        # Replace placeholder with dev URL
-        find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.DEV_API_URL }}|g' {} \;
+        # Debug: Find the config file
+        echo "Looking for config.py files:"
+        find . -name "config.py" -type f
+        
+        # Replace placeholder with dev URL (more explicit approach)
+        CONFIG_FILE=$(find . -path "*/agensight/config.py" -type f)
+        echo "Found config file: $CONFIG_FILE"
+        
+        if [ -f "$CONFIG_FILE" ]; then
+          echo "Replacing URL in: $CONFIG_FILE"
+          sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.DEV_API_URL }}|g' "$CONFIG_FILE"
+          echo "URL replacement completed"
+        else
+          echo "❌ Config file not found!"
+          exit 1
+        fi
         
         # Repack wheel
+        echo "Repacking wheel..."
         python -m wheel pack agensight-*
         
         # Clean up unpacked directory
