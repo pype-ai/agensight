@@ -23,6 +23,46 @@ jobs:
       with:
         node-version: '18.x'
         
+    - name: Build UI (if exists)
+      run: |
+        if [ -d "./agensight/_ui" ]; then
+          echo "🎨 Building UI..."
+          cd ./agensight/_ui
+          npm install
+          npm run build
+          cd ../..
+          echo "✅ UI build completed"
+        else
+          echo "ℹ️  No UI directory found, skipping UI build"
+        fi
+        
+    - name: Install build tools
+      run: |
+        echo "🔧 Installing build tools..."
+        python -m pip install --upgrade pip
+        pip install --upgrade setuptools wheel build twine
+        
+    - name: Clean build directories
+      run: |
+        echo "🧹 Cleaning build directories..."
+        rm -rf dist/* build/*
+        
+    - name: Build package
+      run: |
+        echo "📦 Building package..."
+        python -m build
+        echo "✅ Package build completed"
+        
+    - name: Show built packages
+      run: |
+        echo "📋 Built packages:"
+        ls -la dist/
+        
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-dist
+        path: dist/
 
   deploy-staging:
     needs: build
