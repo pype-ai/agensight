@@ -21,5 +21,4 @@ retry
 rich
 sentry_sdk
 nest_asyncio
-Dbias  # Optional, for bias detection
-allennlp  # Optional, for decomposable attention model
+ragas
