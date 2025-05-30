@@ -88,13 +88,18 @@ jobs:
       run: |
         echo "🔧 Configuring SDK with DEV API URL..."
         cd dist
-        pip install wheel
-        wheel unpack *.whl
+        
+        # Install wheel and ensure it's in PATH
+        python -m pip install --upgrade wheel
+        
+        # Unpack wheel using python -m
+        python -m wheel unpack *.whl
         
         # Replace placeholder with dev URL
         find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.DEV_API_URL }}|g' {} \;
         
-        wheel pack agensight-*
+        # Repack wheel using python -m
+        python -m wheel pack agensight-*
         rm -rf agensight-*/
         echo "✅ DEV URL configured"
         
@@ -178,17 +183,22 @@ jobs:
         echo "Python version: $(python --version)"
         echo "Deploying to production PyPI..."
 
-    - name: Configure Production API URL 
+    - name: Configure Production API URL
       run: |
         echo "🚀 Configuring SDK with PRODUCTION API URL..."
         cd dist
-        pip install wheel
-        wheel unpack *.whl
+        
+        # Install wheel and ensure it's in PATH
+        python -m pip install --upgrade wheel
+        
+        # Unpack wheel using python -m
+        python -m wheel unpack *.whl
         
         # Replace placeholder with production URL
         find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.PROD_API_URL }}|g' {} \;
         
-        wheel pack agensight-*
+        # Repack wheel using python -m
+        python -m wheel pack agensight-*
         rm -rf agensight-*/
         echo "✅ PRODUCTION URL configured"
         
