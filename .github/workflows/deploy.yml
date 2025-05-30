@@ -84,51 +84,6 @@ jobs:
         echo "Event: ${{ github.event_name }}"
         echo "Python version: $(python --version)"
         
-    - name: Configure Dev API URL
-      run: |
-        echo "🔧 Configuring SDK with DEV API URL..."
-        cd dist
-        
-        # Install wheel
-        python -m pip install --upgrade wheel
-        
-        # List files to debug
-        echo "Files in dist directory:"
-        ls -la
-        
-        # Get only the wheel file (exclude tar.gz)
-        WHEEL_FILE=$(ls | grep '\.whl$')
-        echo "Processing wheel file: $WHEEL_FILE"
-        
-        # Unpack only the wheel file
-        python -m wheel unpack "$WHEEL_FILE"
-        
-        # Debug: Find the config file
-        echo "Looking for config.py files:"
-        find . -name "config.py" -type f
-        
-        # Replace placeholder with dev URL (more explicit approach)
-        CONFIG_FILE=$(find . -path "*/agensight/config.py" -type f)
-        echo "Found config file: $CONFIG_FILE"
-        
-        if [ -f "$CONFIG_FILE" ]; then
-          echo "Replacing URL in: $CONFIG_FILE"
-          sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.DEV_API_URL }}|g' "$CONFIG_FILE"
-          echo "URL replacement completed"
-        else
-          echo "❌ Config file not found!"
-          exit 1
-        fi
-        
-        # Repack wheel
-        echo "Repacking wheel..."
-        python -m wheel pack agensight-*
-        
-        # Clean up unpacked directory
-        rm -rf agensight-*/
-        
-        echo "✅ DEV URL configured"
-        
     - name: Verify Test PyPI Token
       env:
         TEST_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -209,24 +164,6 @@ jobs:
         echo "Python version: $(python --version)"
         echo "Deploying to production PyPI..."
 
-    - name: Configure Production API URL
-      run: |
-        echo "🚀 Configuring SDK with PRODUCTION API URL..."
-        cd dist
-        
-        # Install wheel and ensure it's in PATH
-        python -m pip install --upgrade wheel
-        
-        # Only unpack the wheel file (not the tar.gz)
-        python -m wheel unpack *.whl
-        
-        # Replace placeholder with production URL
-        find . -path "*/agensight/config.py" -exec sed -i 's|{{AGENSIGHT_API_URL}}|${{ secrets.PROD_API_URL }}|g' {} \;
-        
-        # Repack wheel using python -m
-        python -m wheel pack agensight-*
-        rm -rf agensight-*/
-        echo "✅ PRODUCTION URL configured"
         
     - name: Verify Production PyPI Token
       env:
