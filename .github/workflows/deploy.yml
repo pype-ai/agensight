@@ -92,7 +92,7 @@ jobs:
         # Install wheel and ensure it's in PATH
         python -m pip install --upgrade wheel
         
-        # Unpack wheel using python -m
+        # Only unpack the wheel file (not the tar.gz)
         python -m wheel unpack *.whl
         
         # Replace placeholder with dev URL
@@ -191,7 +191,7 @@ jobs:
         # Install wheel and ensure it's in PATH
         python -m pip install --upgrade wheel
         
-        # Unpack wheel using python -m
+        # Only unpack the wheel file (not the tar.gz)
         python -m wheel unpack *.whl
         
         # Replace placeholder with production URL
