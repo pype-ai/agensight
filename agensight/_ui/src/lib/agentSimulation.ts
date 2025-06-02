@@ -8,6 +8,9 @@ import {
 
 // Direct OpenAI API configuration
 const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+if (!OPENAI_API_KEY) {
+  throw new Error('NEXT_PUBLIC_OPENAI_API_KEY environment variable is not set');
+}
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 /**
@@ -19,12 +22,13 @@ async function getAgentResponse(
   previousMessages: Message[] = []
 ): Promise<AgentResponse> {
   const startTime = Date.now()
-  console.log(`[${new Date().toISOString()}] Generating response from ${agentConfig.name}`)
   
   try {
     if (!agentConfig.prompt) {
       throw new Error(`No prompt configured for agent: ${agentConfig.name}`);
     }
+
+    console.log({agentConfig})
     
     // Only include the current user input and system prompt
     // Don't include previous messages to avoid any interference
@@ -39,17 +43,7 @@ async function getAgentResponse(
       }
     ];
     
-    // Debug the request being made
-    console.log(`[${new Date().toISOString()}] Sending request to OpenAI:`, {
-      model: agentConfig.modelParams?.model,
-      temperature: agentConfig.modelParams?.temperature,
-      max_tokens: agentConfig.modelParams?.max_tokens,
-      top_p: agentConfig.modelParams?.top_p,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content.substring(0, 50) + (m.content.length > 50 ? '...' : '')
-      }))
-    });
+   
 
     // Call OpenAI API directly
     const response = await fetch(OPENAI_API_URL, {
@@ -153,9 +147,6 @@ export async function processMessageThroughAgents(
   startingAgentName: string = 'UserInteractionAgent',
   useAgentChain: boolean = false
 ): Promise<AgentResponse[]> {
-  console.log(`[${new Date().toISOString()}] Starting agent flow with message:`, message)
-  console.log(`[${new Date().toISOString()}] Available agents:`, config.agents.map(a => a.name))
-  
   const responses: AgentResponse[] = []
   let currentAgent = config.agents.find(a => a.name === startingAgentName)
   
@@ -177,9 +168,7 @@ export async function processMessageThroughAgents(
   // Process through the agent chain
   while (currentAgent && iteration < MAX_ITERATIONS) {
     iteration++
-    
-    console.log(`[${new Date().toISOString()}] Processing with agent:`, currentAgent.name)
-    
+        
     try {
       const response = await getAgentResponse(
         currentAgent,
@@ -187,24 +176,18 @@ export async function processMessageThroughAgents(
         conversationHistory
       )
       
-      console.log(`[${new Date().toISOString()}] Agent ${currentAgent.name} responded with:`, 
-        response.content.substring(0, 100) + (response.content.length > 100 ? '...' : '')
-      )
-      
+      // Add the response to the responses array
       responses.push(response)
       
       // If not using agent chain, stop after the first agent
       if (!useAgentChain) {
-        console.log(`[${new Date().toISOString()}] Single agent processing complete`)
         break;
       }
       
       // Move to the next agent if there's a connection
       const nextAgentName = getNextAgent(currentAgent.name, config.connections)
-      console.log(`[${new Date().toISOString()}] Next agent in flow:`, nextAgentName)
       
       if (!nextAgentName) {
-        console.log(`[${new Date().toISOString()}] No next agent, ending flow`)
         break
       }
       
@@ -238,6 +221,5 @@ export async function processMessageThroughAgents(
     console.warn(`[${new Date().toISOString()}] Reached maximum number of agent iterations (${MAX_ITERATIONS})`)
   }
   
-  console.log(`[${new Date().toISOString()}] Agent flow completed with ${responses.length} responses`)
   return responses
 }

@@ -17,7 +17,12 @@ import {
   DialogContent,
   DialogTitle,
   DialogTrigger,
+  DialogHeader,
+  DialogDescription,
 } from "@/components/ui/dialog"
+import { useQuery } from "@tanstack/react-query"
+import type { AgentConfig, AgentConfigData } from "@/lib/types/agent"
+import { getConfigByVersion } from "@/lib/services/config"
 
 export interface Message {
   id: string
@@ -71,6 +76,11 @@ export const SessionChat = ({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [localConfig, setLocalConfig] = useState<ModelConfig>(session.config ?? DEFAULT_MODEL_CONFIG)
+  const [isPromptsDialogOpen, setIsPromptsDialogOpen] = useState(false)
+  const [editablePrompts, setEditablePrompts] = useState<Array<{
+    name: string;
+    content: string;
+  }>>([])
 
   // Update local config when session config changes
   useEffect(() => {
@@ -85,6 +95,23 @@ export const SessionChat = ({
 
 
   const selectedModelName = OPENAI_MODELS.find(m => m.id === localConfig.model)?.name || localConfig.model
+  
+  const { data: configData } = useQuery<AgentConfigData>({
+    queryKey: ['config', session.id],
+    queryFn: () => getConfigByVersion(session.id),
+    enabled: isPromptsDialogOpen,
+  })
+  
+  useEffect(() => {
+    if (configData?.agents) {
+      setEditablePrompts(
+        configData.agents.map((agent: AgentConfig) => ({
+          name: agent.name,
+          content: agent.prompt || ''
+        }))
+      )
+    }
+  }, [configData])
   
   useEffect(() => {
     const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
@@ -102,7 +129,58 @@ export const SessionChat = ({
       {/* Header */}
       <div className="flex items-center justify-between px-1 py-2 border-b border-muted bg-background/80 sticky top-0">
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">{selectedModelName}</Badge>
+          <Dialog open={isPromptsDialogOpen} onOpenChange={setIsPromptsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" size="sm" className="h-6 px-2 text-xs bg-muted hover:bg-muted/80">
+                Prompts
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0 overflow-hidden">
+              <div className="p-6 pb-0">
+                <DialogHeader>
+                  <DialogTitle>Agent Prompts</DialogTitle>
+                  <DialogDescription>
+                    View and edit prompts for all agents in this session
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+              
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <ScrollArea className="flex-1 px-6 py-2">
+                  <div className="space-y-4">
+                    {editablePrompts.map((prompt, index) => (
+                      <div key={prompt.name} className="space-y-2">
+                        <div className="font-medium">{prompt.name}</div>
+                        <Textarea
+                          value={prompt.content}
+                          onChange={(e) => {
+                            const newPrompts = [...editablePrompts]
+                            newPrompts[index].content = e.target.value
+                            setEditablePrompts(newPrompts)
+                          }}
+                          className="min-h-[100px] font-mono text-xs w-full"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+              
+              <div className="p-4 border-t flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsPromptsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    console.log('Updated prompts:', editablePrompts)
+                    setIsPromptsDialogOpen(false)
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         <div className="flex items-center gap-1">
           <Button
