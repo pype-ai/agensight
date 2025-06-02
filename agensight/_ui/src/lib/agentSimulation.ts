@@ -8,10 +8,14 @@ import {
 
 // Direct OpenAI API configuration
 const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-if (!OPENAI_API_KEY) {
-  throw new Error('NEXT_PUBLIC_OPENAI_API_KEY environment variable is not set');
-}
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+function ensureApiKey() {
+  if (!OPENAI_API_KEY) {
+    throw new Error('NEXT_PUBLIC_OPENAI_API_KEY environment variable is not set. Please set it to use OpenAI features.');
+  }
+  return OPENAI_API_KEY;
+}
 
 /**
  * Generates a response from an agent using the configured LLM
@@ -50,8 +54,8 @@ async function getAgentResponse(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
+        'Authorization': `Bearer ${ensureApiKey()}`
+      }, 
       body: JSON.stringify({
         model: agentConfig.modelParams?.model || 'gpt-4', // Required field
         messages,
