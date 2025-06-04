@@ -118,7 +118,7 @@ python --version
 
 ## Examples
 
-1. [agensight-example-langraph-chatbot](https://github.com/pype-ai/agensight-example-langraph-chatbot)
+1. [agensight-example-langgraph-chatbot](https://github.com/pype-ai/agensight-example-langgraph-chatbot)
 
 ## Setup Tracing
 
