@@ -90,11 +90,6 @@ python --version
 
 ## Getting Started
 
-Choose one of the following approaches based on your needs:
-
-### Approach A: Integration with Existing Project
-
-For developers looking to integrate Agensight into an existing codebase:
 
 1. **Navigate to your project directory**
    ```bash
@@ -120,46 +115,10 @@ For developers looking to integrate Agensight into an existing codebase:
    
    Access the dashboard at `http://localhost:5001`
    
-### Approach B: Demonstration with Sample Application
 
-For users who want to evaluate Agensight with a working example:
+## Examples
 
-1. **Clone the demonstration repository**
-   ```bash
-   git clone https://github.com/pype-ai/agensight-example-langraph-chatbot.git
-   cd agensight-example-langraph-chatbot
-   ```
-
-2. **Initialize virtual environment**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/macOS
-   # .venv\Scripts\activate   # Windows
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install --upgrade agensight
-   ```
-
-4. **Start monitoring dashboard**
-   ```bash
-   agensight view
-   ```
-
-5. **Execute sample application**
-   
-   Open a new terminal session and run:
-   ```bash
-   cd agensight-example-langraph-chatbot
-   source .venv/bin/activate  # Linux/macOS
-   # .venv\Scripts\activate   # Windows
-   python main.py
-   ```
-
-6. **View results**
-   Navigate to `http://localhost:5001` to observe real-time tracing and monitoring.
-
+1. [agensight-example-langraph-chatbot](https://github.com/pype-ai/agensight-example-langraph-chatbot)
 
 ## Setup Tracing
 
