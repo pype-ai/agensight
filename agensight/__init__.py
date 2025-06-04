@@ -42,6 +42,7 @@ def validate_token(token):
         raise ValueError(f"Failed to validate token: {str(e)}")
 
 def init(name="default", mode="local", auto_instrument_llms=True, session=None, token=None):
+    project_id = None;
     if mode in ["prod", "dev"]:
         if token:
             try:
