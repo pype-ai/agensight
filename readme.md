@@ -3,16 +3,17 @@
 
 <div align="center">
    <div>
-      <h3>
          <a href="https://app.pypeai.com/">
-            <strong>Cloud</strong> 
-         </a> · 
+         <strong>Cloud</strong>
+         </a> ·
          <a href="https://www.youtube.com/watch?v=eunL3IFSIB8">
-            <strong>Demo</strong>
-         </a> .
-        <a href="https://pype-db52d533.mintlify.app/introduction"><strong>Docs</strong></a>
-      </h3>
+         <strong>Demo</strong>
+         </a> ·
+         <a href="https://pype-db52d533.mintlify.app/introduction">
+            <strong>Docs</strong>
+         </a>
    </div>
+   <br/>
    <span>Agensight uses <a href="https://github.com/pype-ai/agensight/discussions"><strong>Github Discussions</strong></a>  for Support and Feature Requests.</span>
    <br/>
    <br/>
