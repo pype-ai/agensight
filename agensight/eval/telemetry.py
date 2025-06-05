@@ -5,7 +5,6 @@ import socket
 import sys
 from threading import Event
 import uuid
-import sentry_sdk
 from enum import Enum
 from typing import List, Dict, Any, Optional, Callable
 import requests
@@ -80,43 +79,8 @@ def get_anonymous_public_ip():
 anonymous_public_ip = None
 
 if not telemetry_opt_out():
-    from opentelemetry import trace
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-        OTLPSpanExporter,
-    )
-
-    anonymous_public_ip = get_anonymous_public_ip()
-    sentry_sdk.init(
-        dsn="https://5ef587d58109ee45d6544f3657efdd1f@o4506098477236224.ingest.sentry.io/4506098479136768",
-        profiles_sample_rate=1.0,
-        traces_sample_rate=1.0,  # For performance monitoring
-        send_default_pii=False,  # Don't send personally identifiable information
-        attach_stacktrace=False,  # Don't attach stack traces to messages
-        default_integrations=False,  # Disable Sentry's default integrations
-    )
-
-    # Set up the Tracer Provider
-    trace.set_tracer_provider(TracerProvider())
-    tracer_provider = trace.get_tracer_provider()
-
-    # New Relic License Key and OTLP Endpoint
-    NEW_RELIC_LICENSE_KEY = "1711c684db8a30361a7edb0d0398772cFFFFNRAL"
-    NEW_RELIC_OTLP_ENDPOINT = "https://otlp.nr-data.net:4317"
-    otlp_exporter = OTLPSpanExporter(
-        endpoint=NEW_RELIC_OTLP_ENDPOINT,
-        headers={"api-key": NEW_RELIC_LICENSE_KEY},
-    )
-
-    # Add the OTLP exporter to the span processor
-    span_processor = BatchSpanProcessor(otlp_exporter)
-    tracer_provider.add_span_processor(span_processor)
 
     logging.getLogger("opentelemetry.exporter.otlp").setLevel(logging.CRITICAL)
-
-    # Create a tracer for your application
-    tracer = trace.get_tracer(__name__)
 
 if (
     os.getenv("ERROR_REPORTING") == "YES"
