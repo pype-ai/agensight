@@ -48,13 +48,16 @@ jobs:
         rm -rf dist/* build/*
 
     - name: Inject endpoint URL
+      env:
+        PROD_URL: ${{ secrets.AWS_PROD_URL }}
+        DEV_URL: ${{ secrets.AWS_DEV_URL }}
       run: |
         echo "🔐 Injecting endpoint..."
         cp agensight/config_template.py agensight/config.py
-        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          ENDPOINT=${{ secrets.AWS_PROD_URL }}
+        if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+          ENDPOINT=$PROD_URL
         else
-          ENDPOINT=${{ secrets.AWS_DEV_URL }}
+          ENDPOINT=$DEV_URL
         fi
         sed -i "s|<INJECTED_ENDPOINT>|$ENDPOINT|g" agensight/config.py
 
