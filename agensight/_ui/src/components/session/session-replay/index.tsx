@@ -44,6 +44,8 @@ export default function SessionReplay() {
   const [sessionInputs, setSessionInputs] = useState<Record<string, string>>({})
   const [selectedVersion, setSelectedVersion] = useState<string>('')
   const [availableVersions, setAvailableVersions] = useState<ConfigVersion[]>([])
+
+
   
   // 2. Other hooks (order matters!)
   const searchParams = useSearchParams()
@@ -155,7 +157,7 @@ export default function SessionReplay() {
   }
 
     // Initialize sessions from URL params
-    useEffect(() => {
+  useEffect(() => {
       const sessionIdParam = searchParams.get("session_id")
       if (!sessionIdParam) return
       const sessionIds = sessionIdParam
@@ -178,7 +180,7 @@ export default function SessionReplay() {
       setSessions(initialSessions)
       // Load traces for each session
       sessionIds.forEach((sessionId) => loadSessionTraces(sessionId))
-    }, [searchParams])
+  }, [searchParams])
 
   // Define render functions for different states
   const renderLoadingState = () => (
@@ -304,19 +306,39 @@ export default function SessionReplay() {
     }))
   }
 
-  const removeMessage = (sessionId: string, messageIdx: number) => {
+  const removeMessage = (deletedSessionId: string, messageIdx: number) => {
     setSessions((prev) => {
-      const session = prev[sessionId]
-      if (!session) return prev
-      const newMessages = session.messages.slice(0, messageIdx)
-      return {
-        ...prev,
-        [sessionId]: {
-          ...session,
-          messages: newMessages,
-        },
-      }
-    })
+      // Get the reference session to determine message count
+      const referenceSession = prev[deletedSessionId];
+      if (!referenceSession) return prev;
+      
+      // Get the message ID at the specified index to ensure we're deleting the same message across sessions
+      const referenceMessage = referenceSession.messages[messageIdx];
+      if (!referenceMessage) return prev; // No message at this index
+      
+      // Create a new sessions object with messages removed from all sessions
+      const updatedSessions = { ...prev };
+      
+      Object.keys(updatedSessions).forEach(sessionId => {
+        const session = updatedSessions[sessionId];
+        // Find the index of the message with the same ID as the reference message
+        const messageIndex = session.messages.findIndex(
+          msg => msg.id === referenceMessage.id
+        );
+        
+        if (messageIndex !== -1) {
+          // Remove messages from this index onwards
+          updatedSessions[sessionId] = {
+            ...session,
+            messages: session.messages.slice(0, messageIndex)
+          };
+          
+          console.log(`[${new Date().toISOString()}] Removed messages from index ${messageIndex} in session ${sessionId}`);
+        }
+      });
+      
+      return updatedSessions;
+    });
   }
 
   const updateSessionInput = (sessionId: string, value: string) => {
@@ -370,11 +392,30 @@ export default function SessionReplay() {
 
       console.log(`[${new Date().toISOString()}] Processing message through agent flow...`)
       
-      // Process the message through the agent flow
+      // Get the session's model configuration
+      const currentSessionConfig = session.config || DEFAULT_MODEL_CONFIG
+      
+      // Update the agents with the session's model configuration
+      const updatedAgents = (configData.agents || []).map(agent => ({
+        ...agent,
+        modelParams: {
+          ...agent.modelParams,
+          // Apply the session's model configuration to all agents
+          model: currentSessionConfig.model,
+          temperature: currentSessionConfig.temperature,
+          top_p: currentSessionConfig.top_p,
+          max_tokens: currentSessionConfig.max_tokens,
+          frequency_penalty: currentSessionConfig.frequency_penalty,
+          presence_penalty: currentSessionConfig.presence_penalty,
+          stop: currentSessionConfig.stop_sequences || currentSessionConfig.stop
+        }
+      }));
+      
+      // Process the message through the agent flow with updated configurations
       const agentResponses = await processMessageThroughAgents(
         message,
         {
-          agents: configData.agents || [],
+          agents: updatedAgents,
           connections: configData.connections || [],
           prompts: configData.prompts || []
         },
@@ -473,14 +514,213 @@ export default function SessionReplay() {
     }
   }
 
-  const sendSharedMessage = () => {
-    if (!inputValue.trim()) return
+  const sendSharedMessage = async () => {
+    const message = inputValue.trim()
+    if (!message) return
 
-    // Add your send logic here for all sessions
-    console.log("Sending shared message to all sessions:", inputValue)
+    console.log("Sending shared message to all sessions:", message)
 
-    // Clear the input after sending
+    // Create a temporary message ID that will be consistent across all sessions
+    const tempMessageId = `temp-${Date.now()}`
+    const timestamp = Date.now()
+
+    // Add the user message to all sessions
+    setSessions(prevSessions => {
+      const updatedSessions = { ...prevSessions }
+      Object.keys(updatedSessions).forEach(sessionId => {
+        updatedSessions[sessionId] = {
+          ...updatedSessions[sessionId],
+          isSending: true,
+          messages: [
+            ...updatedSessions[sessionId].messages,
+            {
+              id: tempMessageId,
+              type: 'input' as const,
+              role: 'user',
+              content: message,
+              status: 'sending' as const,
+              timestamp: timestamp / 1000,
+            }
+          ]
+        }
+      })
+      return updatedSessions
+    })
+
+    // Clear the input immediately after sending
     setInputValue("")
+
+    try {
+      // Process message for each session using the full agent configuration
+      const sessionPromises = Object.entries(sessions).map(async ([sessionId, session]) => {
+        try {
+          if (!configData) {
+            throw new Error('Configuration not loaded')
+          }
+
+          console.log(`[${new Date().toISOString()}] Processing message through agent flow for session ${sessionId}...`)
+          
+          // Get the session's model configuration
+          const sessionConfig = session.config || DEFAULT_MODEL_CONFIG
+          
+          // Update the first agent's model parameters with the session's full config
+          const agents = [...(configData.agents || [])]
+          if (agents.length > 0) {
+            agents[0] = {
+              ...agents[0],
+              modelParams: {
+                ...agents[0].modelParams,
+                // Apply all model configuration parameters
+                model: sessionConfig.model,
+                temperature: sessionConfig.temperature,
+                top_p: sessionConfig.top_p,
+                max_tokens: sessionConfig.max_tokens,
+                // Add any other model parameters that should be configurable
+                ...(sessionConfig.frequency_penalty !== undefined && { 
+                  frequency_penalty: sessionConfig.frequency_penalty 
+                }),
+                ...(sessionConfig.presence_penalty !== undefined && { 
+                  presence_penalty: sessionConfig.presence_penalty 
+                }),
+                ...(sessionConfig.stop_sequences && { 
+                  stop_sequences: sessionConfig.stop_sequences 
+                })
+              }
+            }
+          }
+          
+          // Get the session's model configuration
+          const currentSessionConfig = session.config || DEFAULT_MODEL_CONFIG
+          
+          // Update the agents with the session's model configuration
+          const updatedAgents = (configData.agents || []).map(agent => ({
+            ...agent,
+            modelParams: {
+              ...agent.modelParams,
+              // Apply the session's model configuration to all agents
+              model: currentSessionConfig.model,
+              temperature: currentSessionConfig.temperature,
+              top_p: currentSessionConfig.top_p,
+              max_tokens: currentSessionConfig.max_tokens,
+              frequency_penalty: currentSessionConfig.frequency_penalty,
+              presence_penalty: currentSessionConfig.presence_penalty,
+              stop: currentSessionConfig.stop_sequences || currentSessionConfig.stop
+            }
+          }));
+          
+          // Process the message through the agent flow with full configuration
+          const agentResponses = await processMessageThroughAgents(
+            message,
+            {
+              agents: updatedAgents,
+              connections: configData.connections || [],
+              prompts: configData.prompts || []
+            },
+            session.messages  // Include full conversation history
+          )
+          
+          console.log(`[${new Date().toISOString()}] Agent responses for session ${sessionId}:`, agentResponses)
+          
+          // If no responses were generated, add a default response
+          if (agentResponses.length === 0) {
+            agentResponses.push({
+              content: "I'm sorry, I couldn't generate a response. Please try again.",
+              metadata: {
+                agent: 'System',
+                model: 'unknown',
+                processingTime: 0,
+                timestamp: new Date().toISOString(),
+                error: 'No response generated by any agent'
+              }
+            })
+          }
+          
+          return { sessionId, agentResponses, error: null }
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Error in agent flow for session ${sessionId}:`, error)
+          return { 
+            sessionId, 
+            agentResponses: [], 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          }
+        }
+      })
+
+
+      // Wait for all sessions to complete
+      const results = await Promise.all(sessionPromises)
+
+      // Update all sessions with their responses
+      setSessions(prevSessions => {
+        const updatedSessions = { ...prevSessions }
+        
+        results.forEach(({ sessionId, agentResponses, error }) => {
+          if (!updatedSessions[sessionId]) return
+
+          const session = updatedSessions[sessionId]
+          
+          // Update the user's message status to 'sent'
+          const updatedMessages = session.messages.map(msg => 
+            msg.id === tempMessageId 
+              ? { ...msg, status: 'sent' as const }
+              : msg
+          )
+
+          // Add agent responses if any
+          const responseMessages: Message[] = agentResponses.map(response => ({
+            id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: "output" as const,
+            role: 'assistant',
+            content: response.content,
+            status: response.metadata?.error ? "error" as const : "sent" as const,
+            error: response.metadata?.error,
+            timestamp: Date.now() / 1000,
+            metadata: {
+              agent: response.metadata.agent,
+              model: response.metadata.model,
+              processingTime: response.metadata.processingTime,
+              ...(response.metadata.finishReason && { finishReason: response.metadata.finishReason }),
+              ...(response.metadata.usage && { usage: response.metadata.usage }),
+              ...(response.metadata.error && { error: response.metadata.error }),
+            },
+          }))
+
+
+          updatedSessions[sessionId] = {
+            ...session,
+            isSending: false,
+            messages: [...updatedMessages, ...responseMessages],
+          }
+
+        })
+
+        return updatedSessions
+      })
+    } catch (error) {
+      console.error('Error in sendSharedMessage:', error)
+      
+      // Update all sessions with error state
+      setSessions(prevSessions => {
+        const updatedSessions = { ...prevSessions }
+        Object.keys(updatedSessions).forEach(sessionId => {
+          updatedSessions[sessionId] = {
+            ...updatedSessions[sessionId],
+            isSending: false,
+            messages: updatedSessions[sessionId].messages.map(msg => 
+              msg.id === tempMessageId
+                ? { 
+                    ...msg, 
+                    status: 'error' as const,
+                    error: error instanceof Error ? error.message : 'Error processing message',
+                    timestamp: Date.now()
+                  }
+                : msg
+            ),
+          }
+        })
+        return updatedSessions
+      })
+    }
   }
 
   return (
@@ -610,14 +850,24 @@ export default function SessionReplay() {
                     onRemoveSession={Object.keys(sessions).length > 1 ? () => removeSession(session.id) : undefined}
                     onCloneSession={() => cloneSession(session.id)}
                     onChangeModel={(model) => {
+                      const newConfig = {
+                        ...(sessions[session.id].config || DEFAULT_MODEL_CONFIG),
+                        model
+                      };
                       setSessions(prev => ({
                         ...prev,
                         [session.id]: {
                           ...prev[session.id],
-                          config: {
-                            ...(prev[session.id].config || DEFAULT_MODEL_CONFIG),
-                            model
-                          }
+                          config: newConfig
+                        }
+                      }));
+                    }}
+                    onConfigChange={(newConfig) => {
+                      setSessions(prev => ({
+                        ...prev,
+                        [session.id]: {
+                          ...prev[session.id],
+                          config: newConfig
                         }
                       }));
                     }}

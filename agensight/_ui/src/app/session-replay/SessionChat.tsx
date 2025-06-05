@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, X, Trash2, Edit3, Check, RotateCcw, Copy, Settings, Loader2 } from "lucide-react"
+import { Plus, X, Trash2, Edit3, Check, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MessageStatus } from "@/components/chat/MessageStatus"
 import { SettingsPanel } from "./SettingsPanel"
@@ -53,6 +53,7 @@ interface SessionChatProps {
   onRemoveSession?: () => void  // Made optional
   onCloneSession: () => void
   onChangeModel: (model: string) => void
+  onConfigChange?: (config: ModelConfig) => void
   onAddMessageToSession: (type: "input" | "output") => void
   onUpdateMessage: (msgIdx: number, content: string) => void
   onToggleEditMessage: (msgIdx: number) => void
@@ -64,6 +65,7 @@ export const SessionChat = ({
   onRemoveSession,
   onCloneSession,
   onChangeModel,
+  onConfigChange,
   onAddMessageToSession,
   onUpdateMessage,
   onToggleEditMessage,
@@ -89,8 +91,8 @@ export const SessionChat = ({
 
   const handleConfigChange = (newConfig: ModelConfig) => {
     setLocalConfig(newConfig)
-    // Here you would typically update the session's config in the parent component
-    // For now, we'll just update it locally
+    // Update the session's config in the parent component
+    onConfigChange?.(newConfig)
   }
 
 
@@ -100,6 +102,16 @@ export const SessionChat = ({
     queryKey: ['config', session.id],
     queryFn: () => getConfigByVersion(session.id),
     enabled: isPromptsDialogOpen,
+    select: (data) => {
+      const targetAgents = new Set(
+        data.connections.map(conn => conn.to)
+      )
+      const mainAgent = data.agents.find(agent => !targetAgents.has(agent.name))
+      return {
+        ...data,
+        mainAgentName: mainAgent?.name
+      }
+    }
   })
   
   useEffect(() => {
@@ -112,6 +124,8 @@ export const SessionChat = ({
       )
     }
   }, [configData])
+
+  console.log({configData})
   
   useEffect(() => {
     const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
@@ -148,20 +162,23 @@ export const SessionChat = ({
               <div className="flex-1 overflow-hidden flex flex-col">
                 <ScrollArea className="flex-1 px-6 py-2">
                   <div className="space-y-4">
-                    {editablePrompts.map((prompt, index) => (
-                      <div key={prompt.name} className="space-y-2">
-                        <div className="font-medium">{prompt.name}</div>
-                        <Textarea
-                          value={prompt.content}
-                          onChange={(e) => {
-                            const newPrompts = [...editablePrompts]
-                            newPrompts[index].content = e.target.value
-                            setEditablePrompts(newPrompts)
-                          }}
-                          className="min-h-[100px] font-mono text-xs w-full"
-                        />
-                      </div>
-                    ))}
+                    {editablePrompts
+                      .filter(prompt => prompt.name === configData?.mainAgentName)
+                      .map((prompt, index) => (
+                        <div key={prompt.name} className="space-y-2">
+                          <div className="font-medium">{prompt.name}</div>
+                          <Textarea
+                            value={prompt.content}
+                            onChange={(e) => {
+                              const newPrompts = [...editablePrompts]
+                              newPrompts.find(p => p.name === configData?.mainAgentName)!.content = e.target.value
+                              setEditablePrompts(newPrompts)
+                            }}
+                            className="min-h-[100px] font-mono text-xs w-full"
+                          />
+                        </div>
+                      ))
+                    }
                   </div>
                 </ScrollArea>
               </div>
@@ -212,7 +229,7 @@ export const SessionChat = ({
           </Button> */}
           {/* Model dropdown (placeholder) */}
           <select
-            className="bg-transparent border rounded px-2 py-1 text-xs dark:bg-muted/40 min-w-[120px]"
+            className="bg-transparent border rounded px-2 py-1 text-xs dark:bg-muted/40 min-w-[200px]"
             value={localConfig.model}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               const newConfig = { ...localConfig, model: e.target.value }
@@ -220,30 +237,31 @@ export const SessionChat = ({
               onChangeModel(e.target.value)
             }}
           >
+            <optgroup label="GPT-4.5">
+              {OPENAI_MODELS.filter(m => m.id.startsWith('gpt-4.5')).map(model => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="GPT-4.1">
+              {OPENAI_MODELS.filter(m => m.id.startsWith('gpt-4.1')).map(model => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="GPT-4o">
+              {OPENAI_MODELS.filter(m => m.id.startsWith('gpt-4o')).map(model => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
+            </optgroup>
             <optgroup label="GPT-4">
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="gpt-4">GPT-4</option>
-              <option value="gpt-4-32k">GPT-4 32K</option>
-              <option value="gpt-4-vision">GPT-4 Vision</option>
+              {OPENAI_MODELS.filter(m => m.id.startsWith('gpt-4') && !m.id.startsWith('gpt-4.') && !m.id.startsWith('gpt-4o')).map(model => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
             </optgroup>
             <optgroup label="GPT-3.5">
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-              <option value="gpt-3.5-turbo-16k">GPT-3.5 Turbo 16K</option>
+              {OPENAI_MODELS.filter(m => m.id.startsWith('gpt-3.5')).map(model => (
+                <option key={model.id} value={model.id}>{model.name}</option>
+              ))}
             </optgroup>
-            {/* <optgroup label="OpenAI">
-              <option value="dall-e-3">DALL·E 3</option>
-              <option value="whisper-1">Whisper</option>
-              <option value="tts-1">TTS-1</option>
-            </optgroup> */}
-            {/* <optgroup label="Anthropic">
-              <option value="claude-3-opus">Claude 3 Opus</option>
-              <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-              <option value="claude-3-haiku">Claude 3 Haiku</option>
-            </optgroup> */}
-            {/* <optgroup label="Google">
-              <option value="gemini-pro">Gemini Pro</option>
-              <option value="gemini-ultra">Gemini Ultra</option>
-            </optgroup> */}
           </select>
           {/* Message type selector and add button */}
           <div className="flex items-center gap-1 border rounded-md overflow-hidden">

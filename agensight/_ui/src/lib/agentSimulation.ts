@@ -49,20 +49,50 @@ async function getAgentResponse(
     
    
 
+    // Prepare the request payload with all model parameters
+    const requestPayload: {
+      model: string;
+      messages: any[];
+      temperature?: number;
+      max_tokens?: number;
+      top_p?: number;
+      frequency_penalty?: number;
+      presence_penalty?: number;
+      stop?: string | string[];
+    } = {
+      model: agentConfig.modelParams?.model || 'gpt-4',
+      messages,
+      temperature: agentConfig.modelParams?.temperature ?? 0.7,
+      max_tokens: agentConfig.modelParams?.max_tokens,
+      top_p: agentConfig.modelParams?.top_p,
+    };
+
+    // Only include parameters if they are defined
+    if (agentConfig.modelParams?.frequency_penalty !== undefined) {
+      requestPayload.frequency_penalty = agentConfig.modelParams.frequency_penalty;
+    }
+    if (agentConfig.modelParams?.presence_penalty !== undefined) {
+      requestPayload.presence_penalty = agentConfig.modelParams.presence_penalty;
+    }
+    if (agentConfig.modelParams?.stop) {
+      requestPayload.stop = agentConfig.modelParams.stop;
+    } else if (agentConfig.modelParams?.stop_sequences) {
+      requestPayload.stop = agentConfig.modelParams.stop_sequences;
+    }
+
+    console.log('Sending request to OpenAI with config:', JSON.stringify({
+      ...requestPayload,
+      messages: '[...]' // Don't log full messages to avoid cluttering the console
+    }, null, 2));
+
     // Call OpenAI API directly
     const response = await fetch(OPENAI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${ensureApiKey()}`
-      }, 
-      body: JSON.stringify({
-        model: agentConfig.modelParams?.model || 'gpt-4', // Required field
-        messages,
-        temperature: agentConfig.modelParams?.temperature ?? 0.7,
-        max_tokens: agentConfig.modelParams?.max_tokens ?? 1000,
-        top_p: agentConfig.modelParams?.top_p ?? 1,
-      })
+      },
+      body: JSON.stringify(requestPayload)
     });
 
     if (!response.ok) {

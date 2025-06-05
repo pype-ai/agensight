@@ -3,6 +3,10 @@ export interface ModelParams {
   temperature?: number
   top_p?: number
   max_tokens?: number
+  frequency_penalty?: number
+  presence_penalty?: number
+  stop_sequences?: string[]
+  stop?: string[]
 }
 
 export interface AgentConfig {
@@ -28,6 +32,7 @@ export interface AgentConfigData {
   agents: AgentConfig[]
   connections: ConnectionConfig[]
   prompts?: PromptConfig[]
+  mainAgentName?: string
 }
 
 export interface Message {
