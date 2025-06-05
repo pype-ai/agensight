@@ -31,13 +31,14 @@ function SessionDetailsSheet({
   const [activeTab, setActiveTab] = useState("session-details");
 
   const router = useRouter();
-  // const handleRunExperimentButton = () => {
-  //   if (session?.id) {
-  //     router.push(`/session-replay?session_id=${encodeURIComponent(session.id)}`);
-  //   } else {
-  //     router.push('/session-replay');
-  //   }
-  // }
+  const handleRunExperimentButton = () => {
+    console.log("Run Experiment clicked", session?.id);
+    if (session?.id) {
+      router.push(`/session-replay?session_id=${encodeURIComponent(session.id)}`);
+    } else {
+      router.push('/session-replay');
+    }
+  }
 
   // Fetch traces for this session (metadata only)
   const {
@@ -149,6 +150,8 @@ function SessionDetailsSheet({
     },
   });
 
+  console.log({ allTraceDetails })
+
   // Fetch details for the selected span
   const { data: spanDetailsData, isLoading: loadingSpanDetails } = useQuery({
     queryKey: ["span-details", selectedSpanId],
@@ -196,9 +199,9 @@ function SessionDetailsSheet({
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              {/* <Button onClick={() => handleRunExperimentButton()} >
+              <Button onClick={() => handleRunExperimentButton()} >
                 Run Experiment
-              </Button> */}
+              </Button>
             </div>
           </div>
 
@@ -367,7 +370,19 @@ function SessionDetailsSheet({
                   ) : allTraceDetails && traces && allTraceDetails.length > 0 ? (
                     <div className="flex-1 min-h-0">
                       <div className="flex flex-col gap-6 h-full overflow-y-auto p-4">
-                        {allTraceDetails.map((trace: any, idx: number) => {
+                        {[...allTraceDetails]
+                          .sort((a, b) => {
+                            // Get the earliest start_time from agents array for each trace
+                            const getEarliestTime = (trace: any) => {
+                              if (!trace.agents || trace.agents.length === 0) return 0;
+                              return Math.min(...trace.agents.map((agent: any) => agent.start_time || 0));
+                            };
+                            
+                            const timeA = getEarliestTime(a);
+                            const timeB = getEarliestTime(b);
+                            return timeA - timeB; // Ascending order (oldest first)
+                          })
+                          .map((trace: any, idx: number) => {
                           const traceId = traces[idx]?.id || trace.id;
                           return (
                             <div key={traceId} className="flex flex-col gap-2">
