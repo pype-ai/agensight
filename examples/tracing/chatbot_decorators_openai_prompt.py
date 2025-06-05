@@ -6,7 +6,7 @@ from agensight import init, trace, span
 init(
     name="chatbot-with-tools",
     mode="prod",  # Ensure we're in prod mode
-    project_id="385ee1e6"  # Required for prod mode
+    token="385ee1e6"  # Required for prod mode
 )
 
 api_key = os.getenv("OPENAI_API_KEY")

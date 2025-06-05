@@ -186,7 +186,7 @@ import agensight
 agensight.init(
     name="chatbot-with-tools",
     mode="prod",  # Use "local" for local development
-    project_id="abc12345",  # Required for prod/dev
+    token="abc12345",  # Required token for prod/dev
     session="user_123"      # Optional: can be an ID or full session dict
 )
 ```
@@ -194,7 +194,7 @@ agensight.init(
 Parameters:
 - **name**: Your app or service name
 - **mode**: One of "local", "dev", or "prod"
-- **project_id**: Required in cloud modes to associate logs
+- **token**: Required in cloud modes to associate logs
 - **session**: Optional session ID or metadata (str or {id, name, user_id})
 
 > ℹ️ If both init() and @trace() specify a session, @trace() takes precedence for that specific trace.
@@ -244,7 +244,7 @@ def call_llm(messages):
 ```python
 from agensight import init, trace, span
 
-init(name="chat-service", mode="prod", project_id="abc12345", session="user_456")
+init(name="chat-service", mode="prod", token="abc12345", session="user_456")
 
 @span(name="llm")
 def call_llm(messages):

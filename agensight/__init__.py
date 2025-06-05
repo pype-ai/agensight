@@ -8,15 +8,57 @@ from . import tracing
 from . import eval
 import json
 from .eval.setup import setup_eval
-from .config import get_api_config
-import os
 
 import json
 import time
 import requests
 
+from .config import ENDPOINT_URL
 
-def init(name="default", mode="local", auto_instrument_llms=True, session=None, project_id=None):
+print(f"🔧 Agensight initialized with endpoint: {ENDPOINT_URL}")
+
+
+
+def validate_token(token):
+    """
+    Validates the provided token by making a request to the authentication lambda.
+    Returns the project ID if token is valid, otherwise raises ValueError.
+    """
+    try:
+        response = requests.post(
+            # "http://localhost:4000/dev/api/v1/auth/validate",
+            "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/auth/validate",
+            # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/auth/validate",
+            # f"{ENDPOINT_URL}/auth/validate",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps({"token": token}),
+            timeout=5
+        )
+
+        print(response.status_code);
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(data);
+            if "project_id" in data:
+                return data["project_id"]
+            raise ValueError("Invalid response format - missing project_id")
+        else:
+            raise ValueError(f"Token validation failed: {response.text}")
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Failed to validate token: {str(e)}")
+
+def init(name="default", mode="local", auto_instrument_llms=True, session=None, token=None):
+    project_id = None
+    if mode in ["prod", "dev"]:
+        if token:
+            try:
+                project_id = validate_token(token)
+            except ValueError as e:
+                raise ValueError(f"Token validation failed: {str(e)}")
+        else:
+            raise ValueError("token is required when using prod/dev mode")
+
     set_mode(mode)
     mode_to_exporter = {
         "local": "db",
@@ -27,9 +69,6 @@ def init(name="default", mode="local", auto_instrument_llms=True, session=None, 
         "dev": "dev"
     }
     exporter_type = mode_to_exporter.get(mode, "console")
-
-    if mode == "prod" and not project_id:
-        raise ValueError("'project_id' is required when using prod mode")
 
     configure_tracing(mode=mode, project_id=project_id)
 
@@ -51,9 +90,11 @@ def init(name="default", mode="local", auto_instrument_llms=True, session=None, 
 
         if get_mode() in ["prod", "dev"]:
             try:
-                api_url = get_api_config(mode=get_mode()) + "/session"      
                 requests.post(
-                    api_url,
+                    "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create/session",
+                    # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
+                    # "http://localhost:4000/dev/api/v1/logs/create/session",
+                    # f"{ENDPOINT_URL}/logs/create/session",
                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {project_id}" },
                     data=json.dumps({
                         "data": {
