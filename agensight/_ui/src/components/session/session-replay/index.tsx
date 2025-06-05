@@ -10,8 +10,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { ConfigVersion, getConfigByVersion, getConfigVersions } from "@/lib/services/config"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
-import { IconGitBranch } from "@tabler/icons-react"
 import { processMessageThroughAgents } from "@/lib/agentSimulation"
 import { AgentConfig, AgentConfigData, Message } from "@/lib/types/agent"
 import { SessionChat } from "@/app/session-replay/SessionChat"
@@ -23,7 +21,7 @@ interface Session {
   loading: boolean
   isSending?: boolean
   error: string | null
-  config?: ModelConfig
+  config: ModelConfig
 }
 
 // Move helper function outside the component to prevent recreation
@@ -44,7 +42,11 @@ export default function SessionReplay() {
   const [sessionInputs, setSessionInputs] = useState<Record<string, string>>({})
   const [selectedVersion, setSelectedVersion] = useState<string>('')
   const [availableVersions, setAvailableVersions] = useState<ConfigVersion[]>([])
+  const [sessionVersions, setSessionVersions] = useState<Record<string, string>>({})
 
+  const [sessionConfigs, setSessionConfigs] = useState<Record<string, AgentConfigData | null>>({})
+  const [sessionConfigLoading, setSessionConfigLoading] = useState<Record<string, boolean>>({})
+  const [sessionConfigErrors, setSessionConfigErrors] = useState<Record<string, string | null>>({})
 
   
   // 2. Other hooks (order matters!)
@@ -80,6 +82,52 @@ export default function SessionReplay() {
     enabled: !!selectedVersion,
   })
 
+
+  const getSessionVersion = (sessionId: string) => {
+    return sessionVersions[sessionId] || selectedVersion
+  }
+
+  const getSessionConfig = (sessionId: string) => {
+    return sessionConfigs[sessionId]
+  }
+
+  const loadConfigForSession = async (sessionId: string, version: string) => {
+    if (!version) return
+
+    setSessionConfigLoading(prev => ({ ...prev, [sessionId]: true }))
+    setSessionConfigErrors(prev => ({ ...prev, [sessionId]: null }))
+
+    try {
+      console.log(`[${new Date().toISOString()}] Fetching config for session ${sessionId}, version:`, version)
+      const data = await getConfigByVersion(version)
+      console.log(`[${new Date().toISOString()}] Received config data for session ${sessionId}:`, {
+        agents: data.agents?.map((a: AgentConfig) => a.name) || [],
+        connections: data.connections?.length || 0,
+        prompts: data.prompts?.length || 0
+      })
+      
+      setSessionConfigs(prev => ({ ...prev, [sessionId]: data }))
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error fetching config for session ${sessionId}:`, error)
+      setSessionConfigErrors(prev => ({ 
+        ...prev, 
+        [sessionId]: error instanceof Error ? error.message : 'Unknown error'
+      }))
+    } finally {
+      setSessionConfigLoading(prev => ({ ...prev, [sessionId]: false }))
+    }
+  }
+
+  const handleVersionChange = (sessionId: string, version: string) => {
+    setSessionVersions(prev => ({
+      ...prev,
+      [sessionId]: version
+    }))
+    
+    // Load the new config for this session
+    loadConfigForSession(sessionId, version)
+  }
+  
   const loadSessionTraces = async (sessionId: string) => {
     try {
       setSessions((prev) => ({
@@ -88,7 +136,8 @@ export default function SessionReplay() {
           ...prev[sessionId], 
           loading: true, 
           error: null,
-          config: prev[sessionId]?.config || { ...DEFAULT_MODEL_CONFIG }
+          config: prev[sessionId]?.config || { ...DEFAULT_MODEL_CONFIG },
+          messages: prev[sessionId]?.messages || []
         },
       }))
 
@@ -157,7 +206,7 @@ export default function SessionReplay() {
   }
 
     // Initialize sessions from URL params
-  useEffect(() => {
+    useEffect(() => {
       const sessionIdParam = searchParams.get("session_id")
       if (!sessionIdParam) return
       const sessionIds = sessionIdParam
@@ -166,8 +215,11 @@ export default function SessionReplay() {
         .filter(Boolean)
       console.log("Parsed session IDs:", sessionIds)
       if (sessionIds.length === 0) return
-      // Initialize sessions
+      
+      // Initialize sessions with default config
       const initialSessions: Record<string, Session> = {}
+      const initialVersions: Record<string, string> = {}
+      
       sessionIds.forEach((id) => {
         initialSessions[id] = {
           id,
@@ -176,23 +228,33 @@ export default function SessionReplay() {
           error: null,
           config: { ...DEFAULT_MODEL_CONFIG }
         }
+        // Initialize each session with the default version
+        initialVersions[id] = selectedVersion
       })
+      
+      console.log('Initialized sessions:', Object.keys(initialSessions))
       setSessions(initialSessions)
-      // Load traces for each session
-      sessionIds.forEach((sessionId) => loadSessionTraces(sessionId))
-  }, [searchParams])
+      setSessionVersions(initialVersions)
+      
+      // Load config for each session
+      sessionIds.forEach((sessionId) => {
+        loadConfigForSession(sessionId, selectedVersion)
+        loadSessionTraces(sessionId)
+      })
+    }, [searchParams, selectedVersion])
+
 
   // Define render functions for different states
   const renderLoadingState = () => (
     <div className="flex items-center justify-center h-full">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
-      <span className="ml-2">Loading agent configuration...</span>
+      <span className="ml-2">Loading configurations...</span>
     </div>
   );
 
-  const renderErrorState = (error: Error | unknown) => (
+  const renderErrorState = (error: string) => (
     <div className="p-4 text-red-500">
-      Failed to load agent configuration: {error instanceof Error ? error.message : 'Unknown error'}
+      Failed to load configurations: {error}
     </div>
   );
 
@@ -229,7 +291,7 @@ export default function SessionReplay() {
   }, [versionsQuery.data, selectedVersion])
 
   if (isConfigLoading) return renderLoadingState();
-  if (configError) return renderErrorState(configError);
+  if (configError) return renderErrorState(configError as any);
   if (!configData) return renderNoConfigState();
 
 
@@ -241,12 +303,29 @@ export default function SessionReplay() {
       const original = prev[sessionId]
       if (!original) return prev
       const newSessionId = `${sessionId}-${Date.now()}`
+      
+      // Clone the version and config for the new session
+      const originalVersion = sessionVersions[sessionId] || selectedVersion
+      const originalConfig = sessionConfigs[sessionId]
+      
+      setSessionVersions(prevVersions => ({
+        ...prevVersions,
+        [newSessionId]: originalVersion
+      }))
+      
+      if (originalConfig) {
+        setSessionConfigs(prevConfigs => ({
+          ...prevConfigs,
+          [newSessionId]: originalConfig
+        }))
+      }
+      
       return {
         ...prev,
         [newSessionId]: {
           ...JSON.parse(JSON.stringify(original)),
           id: newSessionId,
-          config: { ...original.config }
+          config: { ...DEFAULT_MODEL_CONFIG, ...original.config }
         },
       }
     })
@@ -256,15 +335,42 @@ export default function SessionReplay() {
     setSessions((prev) => {
       const newSessions = { ...prev }
       delete newSessions[sessionId]
-      // Also remove session input if it exists
+      
+      // Clean up all session-specific data
       setSessionInputs((prevInputs) => {
         const newInputs = { ...prevInputs }
         delete newInputs[sessionId]
         return newInputs
       })
+      
+      setSessionVersions((prevVersions) => {
+        const newVersions = { ...prevVersions }
+        delete newVersions[sessionId]
+        return newVersions
+      })
+      
+      setSessionConfigs((prevConfigs) => {
+        const newConfigs = { ...prevConfigs }
+        delete newConfigs[sessionId]
+        return newConfigs
+      })
+      
+      setSessionConfigLoading((prevLoading) => {
+        const newLoading = { ...prevLoading }
+        delete newLoading[sessionId]
+        return newLoading
+      })
+      
+      setSessionConfigErrors((prevErrors) => {
+        const newErrors = { ...prevErrors }
+        delete newErrors[sessionId]
+        return newErrors
+      })
+      
       return newSessions
     })
   }
+
 
   const addMessage = (sessionId: string, type: "input" | "output") => {
     const newMessage: Message = {
@@ -354,11 +460,13 @@ export default function SessionReplay() {
 
     const tempMessageId = `temp-${Date.now()}`
     const session = sessions[sessionId]
+    const sessionConfig = getSessionConfig(sessionId) // Get session-specific config
     
     console.log(`[${new Date().toISOString()}] Sending message to session ${sessionId}:`, {
       message,
       sessionConfig: session.config,
-      existingMessages: session.messages.length
+      existingMessages: session.messages.length,
+      configData: sessionConfig ? 'loaded' : 'not loaded'
     })
     
     // Add the user's message with 'sending' status
@@ -375,7 +483,7 @@ export default function SessionReplay() {
             role: 'user' as const,
             content: message,
             status: 'sending' as const,
-            timestamp: Date.now() / 1000, // Convert to seconds to match other timestamps
+            timestamp: Date.now() / 1000,
           }
         ]
       }
@@ -384,23 +492,21 @@ export default function SessionReplay() {
     // Clear the input
     updateSessionInput(sessionId, "")
 
-
     try {
-      if (!configData) {
-        throw new Error('Configuration not loaded')
+      if (!sessionConfig) {
+        throw new Error('Configuration not loaded for this session')
       }
 
-      console.log(`[${new Date().toISOString()}] Processing message through agent flow...`)
+      console.log(`[${new Date().toISOString()}] Processing message through agent flow for session ${sessionId}...`)
       
       // Get the session's model configuration
       const currentSessionConfig = session.config || DEFAULT_MODEL_CONFIG
       
       // Update the agents with the session's model configuration
-      const updatedAgents = (configData.agents || []).map(agent => ({
+      const updatedAgents = (sessionConfig.agents || []).map(agent => ({
         ...agent,
         modelParams: {
           ...agent.modelParams,
-          // Apply the session's model configuration to all agents
           model: currentSessionConfig.model,
           temperature: currentSessionConfig.temperature,
           top_p: currentSessionConfig.top_p,
@@ -411,20 +517,20 @@ export default function SessionReplay() {
         }
       }));
       
-      // Process the message through the agent flow with updated configurations
+      // Process the message through the agent flow with session-specific config
       const agentResponses = await processMessageThroughAgents(
         message,
         {
           agents: updatedAgents,
-          connections: configData.connections || [],
-          prompts: configData.prompts || []
+          connections: sessionConfig.connections || [],
+          prompts: sessionConfig.prompts || []
         },
         session.messages
       )
       
-      console.log(`[${new Date().toISOString()}] Agent responses:`, agentResponses)
+      console.log(`[${new Date().toISOString()}] Agent responses for session ${sessionId}:`, agentResponses)
       
-      // If no responses were generated, add a default response
+      // Handle responses...
       if (agentResponses.length === 0) {
         agentResponses.push({
           content: "I'm sorry, I couldn't generate a response. Please try again.",
@@ -454,30 +560,23 @@ export default function SessionReplay() {
         )
 
         // Add all agent responses
-        const responseMessages: Message[] = agentResponses.map((response, index) => {
-          const status = response.metadata.error ? 'error' : 'sent' as const
-          const error = response.metadata.error
-          
-          const newMessage: Message = {
-            id: `msg-${Date.now()}`,
-            type: "output",
-            role: 'assistant',
-            content: response.content,
-            status: response.metadata?.error ? "error" : "sent",
-            error: response.metadata?.error,
-            timestamp: Date.now() / 1000, // Convert to seconds to match other timestamps
-            metadata: {
-              agent: response.metadata.agent,
-              model: response.metadata.model,
-              processingTime: response.metadata.processingTime,
-              ...(response.metadata.finishReason && { finishReason: response.metadata.finishReason }),
-              ...(response.metadata.usage && { usage: response.metadata.usage }),
-              ...(response.metadata.error && { error: response.metadata.error }),
-            },
-          }
-
-          return newMessage
-        })
+        const responseMessages: Message[] = agentResponses.map((response) => ({
+          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: "output",
+          role: 'assistant',
+          content: response.content,
+          status: response.metadata?.error ? "error" : "sent",
+          error: response.metadata?.error,
+          timestamp: Date.now() / 1000,
+          metadata: {
+            agent: response.metadata.agent,
+            model: response.metadata.model,
+            processingTime: response.metadata.processingTime,
+            ...(response.metadata.finishReason && { finishReason: response.metadata.finishReason }),
+            ...(response.metadata.usage && { usage: response.metadata.usage }),
+            ...(response.metadata.error && { error: response.metadata.error }),
+          },
+        }))
 
         console.log(`[${new Date().toISOString()}] Updated UI with ${responseMessages.length} agent responses`)
 
@@ -491,7 +590,7 @@ export default function SessionReplay() {
         }
       })
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Error in agent flow:`, error)
+      console.error(`[${new Date().toISOString()}] Error in agent flow for session ${sessionId}:`, error)
       
       // Update the message status to error
       setSessions(prev => ({
@@ -520,7 +619,6 @@ export default function SessionReplay() {
 
     console.log("Sending shared message to all sessions:", message)
 
-    // Create a temporary message ID that will be consistent across all sessions
     const tempMessageId = `temp-${Date.now()}`
     const timestamp = Date.now()
 
@@ -547,81 +645,49 @@ export default function SessionReplay() {
       return updatedSessions
     })
 
-    // Clear the input immediately after sending
     setInputValue("")
 
     try {
-      // Process message for each session using the full agent configuration
+      // Process message for each session using its specific config
       const sessionPromises = Object.entries(sessions).map(async ([sessionId, session]) => {
         try {
-          if (!configData) {
-            throw new Error('Configuration not loaded')
+          const sessionConfig = getSessionConfig(sessionId)
+          if (!sessionConfig) {
+            throw new Error(`Configuration not loaded for session ${sessionId}`)
           }
 
           console.log(`[${new Date().toISOString()}] Processing message through agent flow for session ${sessionId}...`)
           
-          // Get the session's model configuration
-          const sessionConfig = session.config || DEFAULT_MODEL_CONFIG
-          
-          // Update the first agent's model parameters with the session's full config
-          const agents = [...(configData.agents || [])]
-          if (agents.length > 0) {
-            agents[0] = {
-              ...agents[0],
-              modelParams: {
-                ...agents[0].modelParams,
-                // Apply all model configuration parameters
-                model: sessionConfig.model,
-                temperature: sessionConfig.temperature,
-                top_p: sessionConfig.top_p,
-                max_tokens: sessionConfig.max_tokens,
-                // Add any other model parameters that should be configurable
-                ...(sessionConfig.frequency_penalty !== undefined && { 
-                  frequency_penalty: sessionConfig.frequency_penalty 
-                }),
-                ...(sessionConfig.presence_penalty !== undefined && { 
-                  presence_penalty: sessionConfig.presence_penalty 
-                }),
-                ...(sessionConfig.stop_sequences && { 
-                  stop_sequences: sessionConfig.stop_sequences 
-                })
-              }
-            }
-          }
-          
-          // Get the session's model configuration
-          const currentSessionConfig = session.config || DEFAULT_MODEL_CONFIG
+          const sessionModelConfig = session.config || DEFAULT_MODEL_CONFIG
           
           // Update the agents with the session's model configuration
-          const updatedAgents = (configData.agents || []).map(agent => ({
+          const updatedAgents = (sessionConfig.agents || []).map(agent => ({
             ...agent,
             modelParams: {
               ...agent.modelParams,
-              // Apply the session's model configuration to all agents
-              model: currentSessionConfig.model,
-              temperature: currentSessionConfig.temperature,
-              top_p: currentSessionConfig.top_p,
-              max_tokens: currentSessionConfig.max_tokens,
-              frequency_penalty: currentSessionConfig.frequency_penalty,
-              presence_penalty: currentSessionConfig.presence_penalty,
-              stop: currentSessionConfig.stop_sequences || currentSessionConfig.stop
+              model: sessionModelConfig.model,
+              temperature: sessionModelConfig.temperature,
+              top_p: sessionModelConfig.top_p,
+              max_tokens: sessionModelConfig.max_tokens,
+              frequency_penalty: sessionModelConfig.frequency_penalty,
+              presence_penalty: sessionModelConfig.presence_penalty,
+              stop: sessionModelConfig.stop_sequences || sessionModelConfig.stop
             }
           }));
           
-          // Process the message through the agent flow with full configuration
+          // Process the message through the agent flow with session-specific config
           const agentResponses = await processMessageThroughAgents(
             message,
             {
               agents: updatedAgents,
-              connections: configData.connections || [],
-              prompts: configData.prompts || []
+              connections: sessionConfig.connections || [],
+              prompts: sessionConfig.prompts || []
             },
-            session.messages  // Include full conversation history
+            session.messages
           )
           
           console.log(`[${new Date().toISOString()}] Agent responses for session ${sessionId}:`, agentResponses)
           
-          // If no responses were generated, add a default response
           if (agentResponses.length === 0) {
             agentResponses.push({
               content: "I'm sorry, I couldn't generate a response. Please try again.",
@@ -646,11 +712,9 @@ export default function SessionReplay() {
         }
       })
 
-
-      // Wait for all sessions to complete
+      // Wait for all sessions to complete and update UI
       const results = await Promise.all(sessionPromises)
 
-      // Update all sessions with their responses
       setSessions(prevSessions => {
         const updatedSessions = { ...prevSessions }
         
@@ -659,14 +723,12 @@ export default function SessionReplay() {
 
           const session = updatedSessions[sessionId]
           
-          // Update the user's message status to 'sent'
           const updatedMessages = session.messages.map(msg => 
             msg.id === tempMessageId 
               ? { ...msg, status: 'sent' as const }
               : msg
           )
 
-          // Add agent responses if any
           const responseMessages: Message[] = agentResponses.map(response => ({
             id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: "output" as const,
@@ -685,13 +747,11 @@ export default function SessionReplay() {
             },
           }))
 
-
           updatedSessions[sessionId] = {
             ...session,
             isSending: false,
             messages: [...updatedMessages, ...responseMessages],
           }
-
         })
 
         return updatedSessions
@@ -699,7 +759,6 @@ export default function SessionReplay() {
     } catch (error) {
       console.error('Error in sendSharedMessage:', error)
       
-      // Update all sessions with error state
       setSessions(prevSessions => {
         const updatedSessions = { ...prevSessions }
         Object.keys(updatedSessions).forEach(sessionId => {
@@ -723,6 +782,18 @@ export default function SessionReplay() {
     }
   }
 
+  const isAnySessionLoading = Object.values(sessionConfigLoading).some(loading => loading)
+  const hasConfigErrors = Object.values(sessionConfigErrors).some(error => error !== null)
+
+  if (isAnySessionLoading && Object.keys(sessions).length > 0) {
+    return renderLoadingState()
+  }
+
+  if (hasConfigErrors) {
+    const firstError = Object.values(sessionConfigErrors).find(error => error !== null)
+    return renderErrorState(firstError || 'Unknown error')
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Fixed Header - always visible */}
@@ -739,29 +810,6 @@ export default function SessionReplay() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="relative flex items-center">
-            <Select
-              value={selectedVersion}
-              onValueChange={setSelectedVersion}
-            >
-              <SelectTrigger className="w-[180px]">
-                <div className="flex items-center gap-1">
-                  <IconGitBranch size={16} />
-                  <span className="font-medium">{selectedVersion}</span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {availableVersions.map((version) => (
-                  <SelectItem key={version.version} value={version.version}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{version.version}</span>
-                      <span className="text-muted-foreground text-xs truncate">
-                        {version.commit_message}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Button
               variant="outline"
               size="sm"
@@ -842,34 +890,34 @@ export default function SessionReplay() {
                 <div className="flex-1 min-h-0">
                   <SessionChat
                     key={session.id}
-                    session={{
-                      ...session,
-                      config: session.config || { ...DEFAULT_MODEL_CONFIG }
-                    }}
+                    session={session}
+                    availableVersions={availableVersions}
+                    selectedVersion={getSessionVersion(session.id)} // Session-specific version
+                    onVersionChange={(version) => handleVersionChange(session.id, version)} // Session-specific handler
+                    sessionConfig={getSessionConfig(session.id)} // Pass session-specific config
                     onRemoveMessage={(idx) => removeMessage(session.id, idx)}
                     onRemoveSession={Object.keys(sessions).length > 1 ? () => removeSession(session.id) : undefined}
                     onCloneSession={() => cloneSession(session.id)}
                     onChangeModel={(model) => {
-                      const newConfig = {
-                        ...(sessions[session.id].config || DEFAULT_MODEL_CONFIG),
-                        model
-                      };
                       setSessions(prev => ({
                         ...prev,
                         [session.id]: {
                           ...prev[session.id],
-                          config: newConfig
+                          config: {
+                            ...prev[session.id].config,
+                            model
+                          }
                         }
-                      }));
+                      }))
                     }}
-                    onConfigChange={(newConfig) => {
+                    onConfigChange={(config) => {
                       setSessions(prev => ({
                         ...prev,
                         [session.id]: {
                           ...prev[session.id],
-                          config: newConfig
+                          config: { ...config }
                         }
-                      }));
+                      }))
                     }}
                     onAddMessageToSession={(type) => addMessage(session.id, type)}
                     onUpdateMessage={(idx, content) => updateMessage(session.id, idx, content)}

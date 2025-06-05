@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, X, Trash2, Edit3, Check, Settings } from "lucide-react"
+import { Plus, X, Trash2, Edit3, Check, Settings } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { MessageStatus } from "@/components/chat/MessageStatus"
 import { SettingsPanel } from "./SettingsPanel"
@@ -10,6 +10,13 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useState, useRef, useEffect } from "react"
 import { ModelConfig, DEFAULT_MODEL_CONFIG, OPENAI_MODELS } from "@/lib/models"
 import {
@@ -57,6 +64,10 @@ interface SessionChatProps {
   onAddMessageToSession: (type: "input" | "output") => void
   onUpdateMessage: (msgIdx: number, content: string) => void
   onToggleEditMessage: (msgIdx: number) => void
+  selectedVersion: string
+  availableVersions: Array<{ version: string; commit_message?: string }>
+  onVersionChange: (version: string) => void
+  sessionConfig: any
 }
 
 export const SessionChat = ({
@@ -69,12 +80,17 @@ export const SessionChat = ({
   onAddMessageToSession,
   onUpdateMessage,
   onToggleEditMessage,
+  selectedVersion,
+  availableVersions,
+  onVersionChange,
+  sessionConfig
 }: SessionChatProps) => {
   const [newMessageType, setNewMessageType] = useState<"input" | "output">("input")
   
   const onAddMessage = () => {
     onAddMessageToSession(newMessageType)
   }
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [localConfig, setLocalConfig] = useState<ModelConfig>(session.config ?? DEFAULT_MODEL_CONFIG)
@@ -98,21 +114,7 @@ export const SessionChat = ({
 
   const selectedModelName = OPENAI_MODELS.find(m => m.id === localConfig.model)?.name || localConfig.model
   
-  const { data: configData } = useQuery<AgentConfigData>({
-    queryKey: ['config', session.id],
-    queryFn: () => getConfigByVersion(session.id),
-    enabled: isPromptsDialogOpen,
-    select: (data) => {
-      const targetAgents = new Set(
-        data.connections.map(conn => conn.to)
-      )
-      const mainAgent = data.agents.find(agent => !targetAgents.has(agent.name))
-      return {
-        ...data,
-        mainAgentName: mainAgent?.name
-      }
-    }
-  })
+  const configData = sessionConfig
   
   useEffect(() => {
     if (configData?.agents) {
@@ -143,9 +145,34 @@ export const SessionChat = ({
       {/* Header */}
       <div className="flex items-center justify-between px-1 py-2 border-b border-muted bg-background/80 sticky top-0">
         <div className="flex items-center gap-2">
+          <div className="w-[120px]">
+            <Select 
+              value={selectedVersion}
+              onValueChange={onVersionChange}
+            >
+              <SelectTrigger className="h-8 text-xs w-full">
+                <SelectValue placeholder="Select version" className="truncate" />
+              </SelectTrigger>
+              <SelectContent className="w-[120px]">
+                {availableVersions.map(version => (
+                  <SelectItem 
+                    key={version.version} 
+                    value={version.version}
+                    className="py-1.5"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-xs">{version.version}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          
           <Dialog open={isPromptsDialogOpen} onOpenChange={setIsPromptsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="secondary" size="sm" className="h-6 px-2 text-xs bg-muted hover:bg-muted/80">
+              <Button variant="secondary" size="sm" className="h-8 px-2 text-xs bg-muted hover:bg-muted/80">
                 Prompts
               </Button>
             </DialogTrigger>
@@ -229,7 +256,7 @@ export const SessionChat = ({
           </Button> */}
           {/* Model dropdown (placeholder) */}
           <select
-            className="bg-transparent border rounded px-2 py-1 text-xs dark:bg-muted/40 min-w-[200px]"
+            className="bg-transparent border rounded px-2 py-1 text-xs dark:bg-muted/40 max-w-[130px]"
             value={localConfig.model}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               const newConfig = { ...localConfig, model: e.target.value }
@@ -263,27 +290,6 @@ export const SessionChat = ({
               ))}
             </optgroup>
           </select>
-          {/* Message type selector and add button */}
-          <div className="flex items-center gap-1 border rounded-md overflow-hidden">
-            <select
-              value={newMessageType}
-              onChange={(e) => setNewMessageType(e.target.value as "input" | "output")}
-              className="bg-transparent text-xs h-8 px-2 py-0 focus:outline-none focus:ring-0 border-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <option value="input">User</option>
-              <option value="output">Assistant</option>
-            </select>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 w-6 p-0 hover:bg-muted/50" 
-              onClick={onAddMessage} 
-              title="Add Message"
-            >
-              <Plus className="w-2 h-2" />
-            </Button>
-          </div>
           
         </div>
       </div>
@@ -297,7 +303,7 @@ export const SessionChat = ({
               <div key={message.id} className="relative group">
                 <div className={`flex ${message.type === "input" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] ${message.type === "input" ? "order-2" : "order-1"}`}>
-                    <div className={`flex items-center gap-2 mb-1 flex-wrap`}>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <div className="flex items-center gap-1">
                         <Badge
                           variant="secondary"
