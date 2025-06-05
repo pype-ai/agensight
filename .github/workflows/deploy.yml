@@ -46,40 +46,6 @@ jobs:
       run: |
         echo "🧹 Cleaning build directories..."
         rm -rf dist/* build/*
-
-    - name: Inject endpoint URL
-      env:
-        PROD_URL: ${{ secrets.AWS_PROD_URL }}
-        DEV_URL: ${{ secrets.AWS_DEV_URL }}
-      run: |
-        echo "🔐 Injecting endpoint..."
-        cp agensight/config_template.py agensight/config.py
-        if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-          ENDPOINT=$PROD_URL
-        else
-          ENDPOINT=$DEV_URL
-        fi
-        sed -i "s|<INJECTED_ENDPOINT>|$ENDPOINT|g" agensight/config.py
-
-    - name: 🚨 Check injected endpoint
-      run: |
-        echo "🔎 Checking agensight/config.py contents..."
-        cat agensight/config.py
-    
-        # Extract and print the actual ENDPOINT_URL value
-        echo ""
-        echo "🌐 Extracted Endpoint URL:"
-        grep ENDPOINT_URL agensight/config.py || echo "⚠️ ENDPOINT_URL not found"
-    
-        # Fail if the placeholder is still present
-        if grep -q "<INJECTED_ENDPOINT>" agensight/config.py; then
-          echo "❌ Endpoint injection failed! Placeholder still present."
-          exit 1
-        fi
-    
-        echo "✅ Endpoint appears to be injected correctly."
-
-
         
     - name: Build package
       run: |
@@ -239,7 +205,7 @@ jobs:
         ls -la dist/
         
         # Upload to production PyPI (no --repository flag = production)
-        # twine upload dist/* --verbose
+        twine upload dist/* --verbose
         
     - name: Production Success
       run: |
