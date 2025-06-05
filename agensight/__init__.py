@@ -13,6 +13,10 @@ import json
 import time
 import requests
 
+from .config import ENDPOINT_URL
+
+print(f"🔧 Agensight initialized with endpoint: {ENDPOINT_URL}")
+
 
 
 def validate_token(token):
