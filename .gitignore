@@ -19,3 +19,5 @@ agensight.config.json
 .DS_Store
 agensight/.DS_Store
 fix.sh
+
+sdk/config.py
