@@ -17,7 +17,7 @@ import requests
 from .config import ENDPOINT_URL
 
 # Add console logging for debugging
-print(f"🔧 Agensight initialized with endpoint: {ENDPOINT_URL}")
+print(f"🔧 Agensight initialized with endpoint:   {ENDPOINT_URL}")
 
 
 
