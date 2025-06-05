@@ -14,6 +14,8 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from agensight import init, trace, span
 
+
+
 # Initialize Agensight with prod mode and project ID
 init(
     name="travel-assistant-pro",

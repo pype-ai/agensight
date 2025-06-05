@@ -7,11 +7,13 @@ from agensight.tracing.utils import parse_normalized_io_for_span
 from agensight.tracing.utils import _make_io_from_openai_attrs
 from agensight.tracing.config import get_project_id, get_mode
 from agensight.tracing.decorators import current_trace_id, current_trace_name
+from agensight.config import get_api_config
 
-# BASE_URL = "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create"
-BASE_URL = "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create"
+
 
 def post_to_lambda(endpoint: str, data: dict):
+    BASE_URL = get_api_config(mode=get_mode());     
+
     try:
         url = f"{BASE_URL}/{endpoint}"
         response = requests.post(
