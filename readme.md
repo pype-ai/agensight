@@ -3,16 +3,17 @@
 
 <div align="center">
    <div>
-      <h3>
          <a href="https://app.pypeai.com/">
-            <strong>Cloud</strong> 
-         </a> · 
+         <strong>Cloud</strong>
+         </a> ·
          <a href="https://www.youtube.com/watch?v=eunL3IFSIB8">
-            <strong>Demo</strong>
-         </a> .
-        <a href="https://pype-db52d533.mintlify.app/introduction"><strong>Docs</strong></a>
-      </h3>
+         <strong>Demo</strong>
+         </a> ·
+         <a href="https://pype-db52d533.mintlify.app/introduction">
+            <strong>Docs</strong>
+         </a>
    </div>
+   <br/>
    <span>Agensight uses <a href="https://github.com/pype-ai/agensight/discussions"><strong>Github Discussions</strong></a>  for Support and Feature Requests.</span>
    <br/>
    <br/>
@@ -56,10 +57,7 @@ Pype AI's Agensight is an open-source experimentation studio built for conversat
 
 
 
-
-
-
-## Core Features
+# Core Features
 ![3](https://github.com/user-attachments/assets/58352598-4fb8-4477-a71c-e76b27dd632c)
 
 
@@ -79,44 +77,50 @@ Access and replay any past conversation with your agents through the session his
 All data is stored locally inside the SDK, ensuring complete privacy and control over your information. No data is uploaded or tracked externally, and all prompt versions are stored locally in the `.agensight` file. We recommend running Agensight in isolated virtual environments for enhanced security.
 
 
-## Quick Start
+# Quick Start Guide
 
-### 1. Go to Your Project Directory
+## Prerequisites
 
-If you already have a project:
-```bash
-cd path/to/your/project
-```
+- Python 3.10 or higher
 
-Or, to try an example from our repo, use:
-examples/tracing/langgraph_demo.py
-
-### 2. Create and Activate a Virtual Environment
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
-### 3. Install Agensight
-
-**Note:** Agensight requires Python 3.10 or higher. Check your Python version with:
-
+Verify your Python version:
 ```bash
 python --version
 ```
-then ,
-```bash
-pip install --upgrade agensight
-```
 
-### 4. Start the Dashboard
-```bash
-agensight view
-```
-Visit http://localhost:5001 in your browser
+## Getting Started
 
-### Setup Tracing
+
+1. **Navigate to your project directory**
+   ```bash
+   cd path/to/your/project
+   ```
+
+2. **Set up isolated environment**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # Linux/macOS
+   # .venv\Scripts\activate   # Windows
+   ```
+
+3. **Install Agensight**
+   ```bash
+   pip install --upgrade agensight
+   ```
+
+4. **Launch dashboard**
+   ```bash
+   agensight view
+   ```
+   
+   Access the dashboard at `http://localhost:5001`
+   
+
+## Examples
+
+1. [agensight-example-langgraph-chatbot](https://github.com/pype-ai/agensight-example-langgraph-chatbot)
+
+## Setup Tracing
 
 1. **Add to your Python code**
 ```python
@@ -135,7 +139,7 @@ def my_function():
     return my_subtask()
 ```
 
-### Setup Playground
+## Setup Playground
 
 1. **Install MCP Server**
 ```bash
@@ -170,13 +174,13 @@ Add this to your Cursor/Windsurf settings:
 
 That's it! You now have both tracing and playground features set up. The dashboard at http://localhost:5001 will show your traces and allow you to edit your agents in the playground.
 
-## Agent Observability
+# Agent Observability
 
-### 🛰️ Overview
+## Overview
 
 Agensight provides first-class support for tracing your agent workflows using just two decorators: `@trace` for high-level operations and `@span` for finer-grained steps like LLM calls or tool executions. This gives you powerful visibility into your agent's behavior across sessions, tools, and models.
 
-### 🧭 Initialize Tracing
+## Initialize Tracing
 
 Before you use any tracing features, initialize Agensight at the start of your application:
 
@@ -186,7 +190,7 @@ import agensight
 agensight.init(
     name="chatbot-with-tools",
     mode="prod",  # Use "local" for local development
-    project_id="abc12345",  # Required for prod/dev
+    token="abc12345",  # Required token for prod/dev
     session="user_123"      # Optional: can be an ID or full session dict
 )
 ```
@@ -194,12 +198,12 @@ agensight.init(
 Parameters:
 - **name**: Your app or service name
 - **mode**: One of "local", "dev", or "prod"
-- **project_id**: Required in cloud modes to associate logs
+- **token**: Required in cloud modes to associate logs
 - **session**: Optional session ID or metadata (str or {id, name, user_id})
 
 > ℹ️ If both init() and @trace() specify a session, @trace() takes precedence for that specific trace.
 
-### 📍 Create Traces with @trace
+## Create Traces with @trace
 
 The @trace decorator marks a top-level user workflow (e.g. a request handler, multi-agent loop, or RAG pipeline). All nested spans are automatically tied to this trace.
 
@@ -215,7 +219,7 @@ def main():
 - Associates child spans to the trace
 - Inherits or overrides session metadata
 
-### 📌 Add Spans with @span
+## Add Spans with @span
 
 Use the @span decorator to capture individual operations like LLM calls, tool executions, or preprocessing steps. It records execution time, input/output, token usage, and more.
 
@@ -231,20 +235,20 @@ def call_llm(messages):
 - Works with OpenAI, Claude, or custom models
 - Tool calls inside spans are automatically detected if tool_choice="auto"
 
-### ✨ Features of Tracing
+## Features of Tracing
 
-- ✅ **Structured Trace Data**: Includes input/output, tokens used, and timing for each step
-- 🎯 **Session-Aware**: Group all traces and spans by user/session automatically
-- 🧠 **LLM-Aware**: Automatically captures model usage, prompts, completions, and costs
-- 🧰 **Tool Logging**: Captures tool invocations inside spans, no manual work needed
-- ☁️ **Cloud Compatible**: In prod/dev mode, all traces are sent to your Supabase backend
+- **Structured Trace Data**: Includes input/output, tokens used, and timing for each step
+- **Session-Aware**: Group all traces and spans by user/session automatically
+- **LLM-Aware**: Automatically captures model usage, prompts, completions, and costs
+- **Tool Logging**: Captures tool invocations inside spans, no manual work needed
+- **Cloud Compatible**: In prod/dev mode, all traces are sent to your Supabase backend
 
-### 🧪 Example
+## Example
 
 ```python
 from agensight import init, trace, span
 
-init(name="chat-service", mode="prod", project_id="abc12345", session="user_456")
+init(name="chat-service", mode="prod", token="abc12345", session="user_456")
 
 @span(name="llm")
 def call_llm(messages):
@@ -261,9 +265,9 @@ main()
 
 This example shows two @span-wrapped LLM calls under a single @trace. The session metadata ensures everything is tied to the correct user and session in your dashboard.
 
-## LLM Evaluations
+# LLM Evaluations
 
-### GEval: Custom Evaluation Metrics for LLM Applications
+## GEval: Custom Evaluation Metrics for LLM Applications
 
 You can automatically evaluate any component of your LLM application by attaching custom evaluation metrics to a span using the @span decorator. This allows you to assess agent responses  with metrics such as factual accuracy, helpfulness, or any custom criteria you define.
 
@@ -299,7 +303,7 @@ Agensight offers a variety of evaluation metrics tailored to different use cases
 
 
 
-## Playground
+# Playground
 
 Once your playground is generated, you'll have access to these features:
 
@@ -361,9 +365,9 @@ All changes made in the playground automatically sync with your codebase, allowi
 - Collaborate with team members
 - Maintain consistency across environments
 
-## Configuration
+# Configuration
 
-### Trace Configuration
+## Trace Configuration
 
 | Feature      | Default            | Customizable With  |
 |--------------|--------------------|--------------------|
@@ -372,11 +376,11 @@ All changes made in the playground automatically sync with your codebase, allowi
 | Span name    | Auto (`Agent 1`, etc.) | `@span(name="...")`|
 
 
-### Playground Configuration
+## Playground Configuration
 
 Agensight uses a configuration file (`agensight.config.json` by default) to define agents, their connections, and parameters.
 
-#### Basic Structure
+### Basic Structure
 
 ```json
 {
@@ -408,11 +412,11 @@ Agensight uses a configuration file (`agensight.config.json` by default) to defi
 ```
 
 
-## Contributing
+# Contributing
 
 Open source contributions are welcome! Please see our [Contributing Guide](./CONTRIBUTING.md) for details on how to get started, coding standards, and our development workflow.
 
-### Development Workflow
+## Development Workflow
 
 1. Create a virtual environment:
    ```bash
@@ -425,7 +429,7 @@ Open source contributions are welcome! Please see our [Contributing Guide](./CON
    pip install -e .
    ```
 
-### Development Guidelines
+## Development Guidelines
 
 - Follow PEP 8 for Python code
 - Use snake_case for Python functions and variables

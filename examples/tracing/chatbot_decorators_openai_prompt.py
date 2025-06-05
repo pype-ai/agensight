@@ -2,7 +2,12 @@ import os
 import openai
 from agensight import init, trace, span 
 
-init(name="chatbot-with-tools")
+# Initialize with prod mode and project ID
+init(
+    name="chatbot-with-tools",
+    mode="prod",  # Ensure we're in prod mode
+    token="385ee1e6"  # Required for prod mode
+)
 
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -12,8 +17,6 @@ if not api_key:
 openai.api_key = api_key
 system_prompt = "You are a helpful assistant."
 
-from agensight import trace, span
-
 @span()
 def call_openai(messages):
     response = openai.chat.completions.create(
@@ -22,7 +25,14 @@ def call_openai(messages):
     )
     return response.choices[0].message.content.strip()
 
-@trace("chatbot_cli_session", session='abc123')
+# Session info will be handled by the trace decorator
+@trace("chat_interaction", session={"id": "11-22-33-44", "user_id": "user123", "name": "chatbot-cloud-demo"})
+def process_single_interaction(messages, user_input):
+    messages.append({"role": "user", "content": user_input})
+    reply = call_openai(messages)
+    messages.append({"role": "assistant", "content": reply})
+    return reply
+
 def chat_loop():
     print("Simple OpenAI CLI Chatbot. Type 'exit' or 'quit' to stop.")
     messages = [
@@ -39,11 +49,10 @@ def chat_loop():
             break
         if not user_input:
             continue
-        messages.append({"role": "user", "content": user_input})
+        
         try:
-            reply = call_openai(messages)
+            reply = process_single_interaction(messages, user_input)
             print(f"Bot: {reply}")
-            messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             print(f"Error: {e}")
 

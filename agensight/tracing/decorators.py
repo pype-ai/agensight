@@ -9,7 +9,7 @@ from agensight.tracing import get_tracer
 from agensight.tracing.session import is_session_enabled, get_session_id
 from agensight.tracing.context import trace_input, trace_output
 from agensight.tracing.db import get_db
-from agensight.tracing.config import get_mode
+from agensight.tracing.config import get_mode, get_project_id
 from agensight.eval.metrics.base import BaseMetric
 from opentelemetry import trace as ot_trace
 from opentelemetry.trace.status import Status, StatusCode
@@ -23,8 +23,11 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            import requests
+
             trace_name = name or func.__name__
             trace_id = str(uuid.uuid4())
+            project_id = get_project_id()  # Get project ID from config
 
             if isinstance(session, dict):
                 session_id = session.get("id")
@@ -39,7 +42,32 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
                 enable_session_tracking()
                 set_session_id(session_id)
 
-                if get_mode() != "prod":
+                mode = get_mode()
+                if mode in ["prod", "dev"]:
+                    try:
+                        requests.post(
+                            "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create/session",
+                            # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
+                            headers={
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {project_id}"
+                            },
+                            data=json.dumps({
+                                "data": {
+                                    "id": session_id,
+                                    "project_id": project_id,
+                                    "started_at": time.time(),
+                                    "session_name": session_name,
+                                    "user_id": user_id,
+                                    "metadata": json.dumps({}),
+                                    "mode": mode
+                                }
+                            }),
+                            timeout=2
+                        )
+                    except Exception:
+                        pass
+                else:
                     try:
                         conn = get_db()
                         conn.execute(
@@ -75,6 +103,7 @@ def trace(name: Optional[str] = None, session: Optional[Union[str, dict]] = None
             return result
         return wrapper
     return decorator
+
 
 def _extract_usage_from_result(result: Any) -> Optional[Dict[str, int]]:
     if result is None:
