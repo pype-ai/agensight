@@ -58,7 +58,7 @@ class GEvalEvaluator(BaseMetric):
         self.model, self.using_native_model = initialize_model(model)
         self.evaluation_model = self.model.get_model_name()
         self.evaluation_steps = evaluation_steps
-        self.threshold = 1 if strict_mode else threshold
+        self.threshold = 1 if strict_mode == True else threshold
         self.top_logprobs = top_logprobs
         self.strict_mode = strict_mode
         self.async_mode = async_mode
@@ -99,6 +99,8 @@ class GEvalEvaluator(BaseMetric):
                 )
                 self.reason = reason
                 self.score = float(g_score) / 10
+
+                
                 self.score = (
                     0
                     if self.strict_mode and self.score < self.threshold
