@@ -70,7 +70,7 @@ contextual_relevancy = ContextualRelevancyMetric(
     retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
 )
 
-@span(name="generate_joke",metrics=[contextual_relevancy])
+@span(name="generate_joke",metrics=[contextual_relevancy,helpfulness,a])
 def generate_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",

@@ -23,6 +23,7 @@ def evaluate_with_gval(
     context: Optional[str] = None,
     retrieval_context: Optional[str] = None,
     model: str = "gpt-4o-mini",
+    async_mode: bool = False,
     threshold: float = 0.5,
     strict_mode: bool = False,
     verbose_mode: bool = False,
