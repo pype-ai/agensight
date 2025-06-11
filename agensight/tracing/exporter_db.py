@@ -5,7 +5,8 @@ from collections import defaultdict
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from agensight.tracing.db import get_db
 from agensight.tracing.utils import parse_normalized_io_for_span
-from agensight.eval.metrics.geval.evaluate_gval import evaluate_with_gval
+from agensight.eval.evaluate import process_all_metrics_dynamically
+
 
 TOKEN_PATTERNS = [
     r'"total_tokens":\s*(\d+)',
@@ -158,45 +159,8 @@ class DBSpanExporter(SpanExporter):
                 pass
 
             try:
-
                 # Use the metrics configuration from the span
-                metrics_configs_str = attrs.get("metrics.configs")
-
-                if metrics_configs_str and "gen_ai.normalized_input_output" in attrs:
-                    metrics_configs = json.loads(metrics_configs_str)
-                    nio_data = json.loads(attrs.get("gen_ai.normalized_input_output"))
-                    input_text = nio_data.get("prompts", [{}])[0].get("content", "")
-                    output_text = nio_data.get("completions", [{}])[0].get("content", "")
-                    
-                    if input_text and output_text:
-                        
-                        # Evaluate based on each metric in the config
-                        for metric_name, config in metrics_configs.items():
-                            # Extract parameters from the config
-                            criteria = config.get("criteria")
-                            model = config.get("model", "gpt-4o-mini")
-                            threshold = config.get("threshold", 0.5)
-                            strict_mode = config.get("strict_mode", False)
-                            verbose_mode = config.get("verbose_mode", False)
-                            
-                            if criteria:
-                                # Call evaluate_with_gval with parameters from the config
-                                evaluate_with_gval(
-                                    input_text=input_text,
-                                    output_text=output_text,
-                                    name=metric_name,
-                                    criteria=criteria,
-                                    parent_id=span_id,
-                                    parent_type="span",
-                                    model=model,
-                                    threshold=threshold,
-                                    strict_mode=strict_mode,
-                                    verbose_mode=verbose_mode,
-                                    save_to_db=True,
-                                    source="automatic",
-                                    meta={"trace_id": trace_id, "span_name": span.name}
-                                )
-
+                process_all_metrics_dynamically(attrs, span_id, trace_id, span.name)
             except Exception as e:
                 print(f"Error in direct evaluation using configs for span {span_id}: {e}")
                 pass

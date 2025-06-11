@@ -34,9 +34,11 @@ class ContextualRelevancyMetric(BaseMetric):
         threshold: float = 0.5,
         model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         include_reason: bool = True,
-        async_mode: bool = True,
+        async_mode: bool = False,
         strict_mode: bool = False,
         verbose_mode: bool = False,
+        name: Optional[str] = None,
+        retrieval_context: Optional[str] = None,
         evaluation_template: Type[
             ContextualRelevancyTemplate
         ] = ContextualRelevancyTemplate,
@@ -49,6 +51,8 @@ class ContextualRelevancyMetric(BaseMetric):
         self.strict_mode = strict_mode
         self.verbose_mode = verbose_mode
         self.evaluation_template = evaluation_template
+        self.retrieval_context = retrieval_context
+        self.name = name
 
     def measure(
         self,
@@ -59,12 +63,11 @@ class ContextualRelevancyMetric(BaseMetric):
         if isinstance(test_case, ConversationalTestCase):
             test_case = test_case.turns[-1]
         check_llm_test_case_params(test_case, self._required_params, self)
-
         self.evaluation_cost = 0 if self.using_native_model else None
         with metric_progress_indicator(
-            self, _show_indicator=_show_indicator, _in_component=_in_component
+            self, _show_indicator=False, _in_component=_in_component
         ):
-            if self.async_mode:
+            if self.async_mode == True:
                 loop = get_or_create_event_loop()
                 loop.run_until_complete(
                     self.a_measure(
@@ -74,9 +77,10 @@ class ContextualRelevancyMetric(BaseMetric):
                     )
                 )
             else:
+                
                 self.verdicts_list: List[ContextualRelevancyVerdicts] = [
                     (self._generate_verdicts(test_case.input, context))
-                    for context in test_case.retrieval_context
+                    for context in (test_case.retrieval_context if self.retrieval_context is None else self.retrieval_context)
                 ]
                 self.score = self._calculate_score()
                 self.reason = self._generate_reason(test_case.input)
@@ -112,7 +116,7 @@ class ContextualRelevancyMetric(BaseMetric):
                 await asyncio.gather(
                     *[
                         self._a_generate_verdicts(test_case.input, context)
-                        for context in test_case.retrieval_context
+                        for context in (test_case.retrieval_context if self.retrieval_context is None else self.retrieval_context)
                     ]
                 )
             )
