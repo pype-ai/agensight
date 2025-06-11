@@ -43,7 +43,7 @@ class ContextualRelevancyMetric(BaseMetric):
             ContextualRelevancyTemplate
         ] = ContextualRelevancyTemplate,
     ):
-        self.threshold = 1 if strict_mode else threshold
+        self.threshold = 1 if strict_mode == True else threshold
         self.model, self.using_native_model = initialize_model(model)
         self.evaluation_model = self.model.get_model_name()
         self.include_reason = include_reason
