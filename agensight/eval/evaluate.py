@@ -396,7 +396,6 @@ def process_all_metrics_dynamically(attrs: Dict[str, Any], span_id: str, trace_i
                                 strict_mode=config.get("strict_mode", False),
                                 verbose_mode=config.get("verbose_mode", False),
                                 include_reason=config.get("include_reason", True),
-                                async_mode=config.get("async_mode", False),
                                 save_to_db=True,
                                 source="automatic",
                                 meta={"trace_id": trace_id, "span_name": span_name}
