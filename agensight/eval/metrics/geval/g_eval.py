@@ -80,7 +80,7 @@ class GEvalEvaluator(BaseMetric):
         with metric_progress_indicator(
             self, _show_indicator=_show_indicator, _in_component=_in_component
         ):
-            if self.async_mode:
+            if self.async_mode == True:
                 loop = get_or_create_event_loop()
                 loop.run_until_complete(
                     self.a_measure(
