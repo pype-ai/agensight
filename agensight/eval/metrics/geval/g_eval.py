@@ -47,7 +47,8 @@ class GEvalEvaluator(BaseMetric):
         strict_mode: bool = False,
         verbose_mode: bool = False,
         _include_g_eval_suffix: bool = True,
-    ):
+    ):  
+        
         validate_criteria_and_evaluation_steps(criteria, evaluation_steps)
         self.name = name
         self.evaluation_params = evaluation_params
@@ -58,12 +59,31 @@ class GEvalEvaluator(BaseMetric):
         self.model, self.using_native_model = initialize_model(model)
         self.evaluation_model = self.model.get_model_name()
         self.evaluation_steps = evaluation_steps
-        self.threshold = 1 if strict_mode == True else threshold
+        
+        # Convert threshold to float
+        if isinstance(threshold, str):
+            self.threshold = float(threshold)
+        else:
+            self.threshold = float(threshold) if threshold is not None else 0.5
+            
         self.top_logprobs = top_logprobs
-        self.strict_mode = strict_mode
-        self.async_mode = async_mode
-        self.verbose_mode = verbose_mode
-        self._include_g_eval_suffix = _include_g_eval_suffix
+        
+        # Convert all boolean parameters properly
+        self.strict_mode = self._convert_to_bool(strict_mode)
+        self.async_mode = self._convert_to_bool(async_mode)
+        self.verbose_mode = self._convert_to_bool(verbose_mode)
+        self._include_g_eval_suffix = self._convert_to_bool(_include_g_eval_suffix)
+
+    def _convert_to_bool(self, value):
+        """Convert various representations to proper boolean"""
+        if isinstance(value, bool):
+            return value
+        elif isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on')
+        elif isinstance(value, (int, float)):
+            return bool(value)
+        else:
+            return bool(value)
 
     def measure(
         self,
@@ -74,50 +94,78 @@ class GEvalEvaluator(BaseMetric):
     ) -> float:
         if isinstance(test_case, ConversationalTestCase):
             test_case = test_case.turns[-1]
+
         check_llm_test_case_params(test_case, self.evaluation_params, self)
-
         self.evaluation_cost = 0 if self.using_native_model else None
-        with metric_progress_indicator(
-            self, _show_indicator=_show_indicator, _in_component=_in_component
-        ):
-            if self.async_mode == True:
-                loop = get_or_create_event_loop()
-                loop.run_until_complete(
-                    self.a_measure(
-                        test_case,
-                        _show_indicator=False,
-                        _in_component=_in_component,
-                        _additional_context=_additional_context,
-                    )
+        if self.async_mode == True:
+            loop = get_or_create_event_loop()
+            loop.run_until_complete(
+                self.a_measure(
+                    test_case,
+                    _show_indicator=False,
+                    _in_component=_in_component,
+                    _additional_context=_additional_context,
                 )
-            else:
-                self.evaluation_steps: List[str] = (
-                    self._generate_evaluation_steps()
-                )
-                g_score, reason = self._evaluate(
-                    test_case, _additional_context=_additional_context
-                )
-                self.reason = reason
-                self.score = float(g_score) / 10
+            )
+        else:
+            self.evaluation_steps: List[str] = (
+                self._generate_evaluation_steps()
+            )
 
-                
-                self.score = (
-                    0
-                    if self.strict_mode and self.score < self.threshold
-                    else self.score
-                )
-                self.success = self.score >= self.threshold
-                self.verbose_logs = construct_verbose_logs(
-                    self,
-                    steps=[
-                        f"Criteria:\n{self.criteria}",
-                        f"Evaluation Steps:\n{prettify_list(self.evaluation_steps)}",
-                        f"Rubric:\n{format_rubrics(self.rubric)}",
-                        f"Score: {self.score}\nReason: {self.reason}",
-                    ],
-                )
+        try:
+            print("line 95 geval" , self.async_mode)
+            g_score, reason = self._evaluate(
+                test_case, _additional_context=_additional_context
+            )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise
 
-            return self.score
+        try:
+            self.reason = reason
+        except Exception as e:
+            raise
+
+        try:
+            self.score = float(g_score) / 10
+        except Exception as e:
+            raise
+
+        try:
+            original_score = self.score
+
+            self.score = (
+                0
+                if self.strict_mode and (original_score < self.threshold)
+                else original_score
+            )
+        except Exception as e:
+            raise
+
+        try:
+            self.success = self.score >= self.threshold
+            print(f"line 119 geval - success: {self.success}")
+        except Exception as e:
+            print(f"❌ ERROR setting success: {type(e).__name__}: {e}")
+            raise
+
+        try:
+            self.verbose_logs = construct_verbose_logs(
+                self,
+                steps=[
+                    f"Criteria:\n{self.criteria}",
+                    f"Evaluation Steps:\n{prettify_list(self.evaluation_steps)}",
+                    f"Rubric:\n{format_rubrics(self.rubric)}",
+                    f"Score: {self.score}\nReason: {self.reason}",
+                ],
+            )
+            print("line 126 geval" , self.score)
+        except Exception as e:
+            print(f"❌ ERROR creating verbose_logs: {type(e).__name__}: {e}")
+            raise
+        
+        return self.score
 
     async def a_measure(
         self,

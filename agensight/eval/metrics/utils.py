@@ -113,6 +113,7 @@ def print_verbose_logs(metric: str, logs: str):
 
 
 def construct_verbose_logs(metric: BaseMetric, steps: List[str]) -> str:
+
     verbose_logs = ""
     for i in range(len(steps) - 1):
         verbose_logs += steps[i]

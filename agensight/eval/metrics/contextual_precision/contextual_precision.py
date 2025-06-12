@@ -44,15 +44,34 @@ class ContextualPrecisionMetric(BaseMetric):
 
     ):  
         self.name = name
-        self.threshold = 1 if strict_mode == True else threshold
-        self.include_reason = include_reason
+        
+        # Convert threshold to float
+        if isinstance(threshold, str):
+            self.threshold = float(threshold)
+        else:
+            self.threshold = float(threshold) if threshold is not None else 0.5
+        
+        # Convert all boolean parameters properly
+        self.include_reason = self._convert_to_bool(include_reason)
+        self.async_mode = self._convert_to_bool(async_mode)
+        self.strict_mode = self._convert_to_bool(strict_mode)
+        self.verbose_mode = self._convert_to_bool(verbose_mode)
+        
         self.model, self.using_native_model = initialize_model(model)
         self.evaluation_model = self.model.get_model_name()
-        self.async_mode = async_mode
-        self.strict_mode = strict_mode
-        self.verbose_mode = verbose_mode
         self.evaluation_template = evaluation_template
         self.retrieval_context = retrieval_context
+
+    def _convert_to_bool(self, value):
+        """Convert various representations to proper boolean"""
+        if isinstance(value, bool):
+            return value
+        elif isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on')
+        elif isinstance(value, (int, float)):
+            return bool(value)
+        else:
+            return bool(value)
 
     def measure(
         self,

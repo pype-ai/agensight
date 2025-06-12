@@ -75,6 +75,9 @@ def evaluate_with_gval(
         evaluation_params.append(ModelTestCaseParams.RETRIEVAL_CONTEXT)
     
     # Create evaluator with provided parameters
+    print("starting geval calculation.....")
+
+
     evaluator = GEvalEvaluator(
         name=name,
         criteria=criteria,
@@ -102,11 +105,14 @@ def evaluate_with_gval(
         test_case_kwargs["retrieval_context"] = retrieval_context
     
     test_case = ModelTestCase(**test_case_kwargs)
+
+    print("test case created" , test_case)
     
     # Measure and return results
     try:
         score = evaluator.measure(test_case)
-        
+
+
         # Save to database if requested
         if save_to_db and parent_id:
             evaluation_meta = {
@@ -188,6 +194,8 @@ def evaluate_with_contextual_relevancy(
         actual_output=output_text,
         retrieval_context=retrieval_context
     )
+
+    print("test case created" , test_case)
     
     try:
         print("evaluator", evaluator.measure(test_case))
@@ -271,24 +279,25 @@ def evaluate_with_contextual_precision(
         include_reason=include_reason,
     )
 
-
     
     # Create test case
     test_case = ModelTestCase(
         input=input_text,
-        actual_output=output_text,
+        actual_output="",
+        expected_output=output_text,
         retrieval_context=retrieval_context
     )
+
+    print("test case created" , test_case)
 
     
     try:
 
-        print("evaluator", evaluator.measure(test_case))
         score = evaluator.measure(test_case)
-        reason = getattr(evaluator, 'reason', 'No reason provided')
+        reason = evaluator.reason;
         
-        print(score, "score")
-        print(reason, "reason")
+        print("score" , score)
+        print("reason" , evaluator.reason)
         # Save to database if requested
         if save_to_db and parent_id:
             evaluation_meta = {

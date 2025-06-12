@@ -14,7 +14,7 @@ from agensight import trace, span
 from openai import OpenAI
 import logging
 from agensight.eval.metrics import GEvalEvaluator
-from agensight.eval.metrics import ContextualPrecisionMetric,ContextualRecallMetric,ContextualRelevancyMetric
+from agensight.eval.metrics import ContextualPrecisionMetric,ContextualRelevancyMetric
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -40,37 +40,29 @@ class State(TypedDict):
 
 factual_accuracy = GEvalEvaluator(
         name="Factual Accuracy",
-        criteria="Evaluate whether the actual output contains factually accurate information based on the expected output.",
+        criteria="score high if input is relevant to the output",
         threshold=0.7,
         model="gpt-4o-mini"
 )
 
 
-helpfulness = GEvalEvaluator(
-        name="Helpfulness",
-        criteria="Evaluate whether the output is helpful and addresses the user's input question.",
-        threshold=1,
-        model="gpt-4o-mini"
 
-)
-
-a = ContextualPrecisionMetric(
+contextual_precision = ContextualPrecisionMetric(
     name="Contextual Precision",
     threshold=0.7,
     model="gpt-4o",
-    retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
+    retrieval_context=["cats"]
 )
-
 
 
 contextual_relevancy = ContextualRelevancyMetric(
     name="Contextual Relevancy",
     threshold=0.7,
     model="gpt-4o",
-    retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
+    retrieval_context=["cats"]
 )
 
-@span(name="generate_joke",metrics=[contextual_relevancy,helpfulness,a])
+@span(name="generate_joke",metrics=[contextual_precision,contextual_relevancy,factual_accuracy])
 def generate_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",
