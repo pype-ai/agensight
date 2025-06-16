@@ -195,31 +195,21 @@ def span(
             if is_session_enabled():
                 attributes["session.id"] = get_session_id()
             
+
+            # Add metrics to the span
             if metrics:
-                metric_configs = {}
-                for i, metric in enumerate(metrics):
-                    metric_name = getattr(metric, "name", f"metric_{i}")
-                    config = {
-                        "type": metric.__class__.__name__,
-                        "name": metric_name,
+                attributes["metrics.configs"] = json.dumps({
+                    getattr(m, "name", f"metric_{i}"): {
+                        "type": m.__class__.__name__,
+                        **{k: (v.value if hasattr(v, 'value') else 
+                            str(v))
+                        for k, v in vars(m).items() 
+                        if not k.startswith('_') and not callable(v)}
                     }
-                    if hasattr(metric, "criteria"):
-                        config["criteria"] = metric.criteria
-                    if hasattr(metric, "model"):
-                        config["model"] = metric.model.get_model_name()
-                    if hasattr(metric, "threshold"):
-                        config["threshold"] = metric.threshold
-                    if hasattr(metric, "strict_mode"):
-                        config["strict_mode"] = metric.strict_mode
-                    if hasattr(metric, "verbose_mode"):
-                        config["verbose_mode"] = metric.verbose_mode
-                    if hasattr(metric, "evaluation_params"):
-                        config["has_evaluation_params"] = True
-                    if hasattr(metric, "evaluation_steps"):
-                        config["has_evaluation_steps"] = True
-                    metric_configs[metric_name] = config
-                
-                attributes["metrics.configs"] = json.dumps(metric_configs)
+                    for i, m in enumerate(metrics)
+                })
+
+            
 
             with tracer.start_as_current_span(span_name, attributes=attributes) as span_obj:
                 fallback_input = args or kwargs

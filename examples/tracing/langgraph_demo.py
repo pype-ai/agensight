@@ -14,6 +14,7 @@ from agensight import trace, span
 from openai import OpenAI
 import logging
 from agensight.eval.metrics import GEvalEvaluator
+from agensight.eval.metrics import ContextualPrecisionMetric,ContextualRecallMetric,ContextualRelevancyMetric
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -41,21 +42,35 @@ factual_accuracy = GEvalEvaluator(
         name="Factual Accuracy",
         criteria="Evaluate whether the actual output contains factually accurate information based on the expected output.",
         threshold=0.7,
-        verbose_mode=True,
         model="gpt-4o-mini"
 )
+
 
 helpfulness = GEvalEvaluator(
         name="Helpfulness",
         criteria="Evaluate whether the output is helpful and addresses the user's input question.",
         threshold=1,
-        verbose_mode=True,
         model="gpt-4o-mini"
+
+)
+
+a = ContextualPrecisionMetric(
+    name="Contextual Precision",
+    threshold=0.7,
+    model="gpt-4o",
+    retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
 )
 
 
 
-@span(name="generate_joke",metrics=[factual_accuracy,helpfulness])
+contextual_relevancy = ContextualRelevancyMetric(
+    name="Contextual Relevancy",
+    threshold=0.7,
+    model="gpt-4o",
+    retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
+)
+
+@span(name="generate_joke",metrics=[contextual_relevancy,helpfulness,a])
 def generate_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -63,13 +78,13 @@ def generate_joke(state: State):
     )
     return {"joke": msg.choices[0].message.content}
 
-@span(name="check_punchline",metrics=[factual_accuracy,helpfulness])
+@span(name="check_punchline",metrics=[])
 def check_punchline(state: State):
     if "?" in state["joke"] or "!" in state["joke"]:
         return "Fail"
     return "Pass"
 
-@span(name="improve_joke",metrics=[factual_accuracy,helpfulness])
+@span(name="improve_joke",metrics=[])
 def improve_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -77,7 +92,7 @@ def improve_joke(state: State):
     )
     return {"improved_joke": msg.choices[0].message.content}
 
-@span(name="polish_joke",metrics=[factual_accuracy])
+@span(name="polish_joke",metrics=[])
 def polish_joke(state: State):
     msg = client.chat.completions.create(
         model="gpt-3.5-turbo",

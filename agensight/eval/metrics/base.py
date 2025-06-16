@@ -28,6 +28,7 @@ class BaseMetric:
     skipped = False
     model = Optional[DeepEvalBaseLLM]
     using_native_model = Optional[bool]
+    retrieval_context = Optional[List[str]]
 
     @abstractmethod
     def measure(self, test_case: ModelTestCase, *args, **kwargs) -> float:

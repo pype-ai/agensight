@@ -26,22 +26,25 @@ class ContextualPrecisionMetric(BaseMetric):
         ModelTestCaseParams.INPUT,
         ModelTestCaseParams.ACTUAL_OUTPUT,
         ModelTestCaseParams.RETRIEVAL_CONTEXT,
-        ModelTestCaseParams.EXPECTED_OUTPUT,
-    ]
+                ]
 
     def __init__(
         self,
         threshold: float = 0.5,
+        name: Optional[str] = None,
         model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         include_reason: bool = True,
-        async_mode: bool = True,
+        async_mode: bool = False,
         strict_mode: bool = False,
         verbose_mode: bool = False,
+        retrieval_context: Optional[List[str]] = None,
         evaluation_template: Type[
             ContextualPrecisionTemplate
         ] = ContextualPrecisionTemplate,
-    ):
-        self.threshold = 1 if strict_mode else threshold
+
+    ):  
+        self.name = name
+        self.threshold = 1 if strict_mode == True else threshold
         self.include_reason = include_reason
         self.model, self.using_native_model = initialize_model(model)
         self.evaluation_model = self.model.get_model_name()
@@ -49,6 +52,7 @@ class ContextualPrecisionMetric(BaseMetric):
         self.strict_mode = strict_mode
         self.verbose_mode = verbose_mode
         self.evaluation_template = evaluation_template
+        self.retrieval_context = retrieval_context
 
     def measure(
         self,
@@ -58,27 +62,32 @@ class ContextualPrecisionMetric(BaseMetric):
     ) -> float:
         if isinstance(test_case, ConversationalTestCase):
             test_case = test_case.turns[-1]
+        
         check_llm_test_case_params(test_case, self._required_params, self)
-
+        print("self.async_mode", self.async_mode)
         self.evaluation_cost = 0 if self.using_native_model else None
         with metric_progress_indicator(
             self, _show_indicator=_show_indicator, _in_component=_in_component
         ):
             if self.async_mode:
-                loop = get_or_create_event_loop()
-                loop.run_until_complete(
-                    self.a_measure(
-                        test_case,
-                        _show_indicator=False,
-                        _in_component=_in_component,
+                try:
+                    loop = get_or_create_event_loop()
+                    loop.run_until_complete(
+                        self.a_measure(test_case, _show_indicator=False, _in_component=_in_component,)
                     )
-                )
+                except RuntimeError as e:
+                    if "interpreter shutdown" in str(e) or "event loop" in str(e):
+                        # Fallback to sync mode during shutdown
+                        self.async_mode = False
+                        return self.measure(test_case, _show_indicator, _in_component)
+                    else:
+                        raise
             else:
                 self.verdicts: List[ContextualPrecisionVerdict] = (
                     self._generate_verdicts(
                         test_case.input,
                         test_case.expected_output,
-                        test_case.retrieval_context,
+                        test_case.retrieval_context if self.retrieval_context is None else self.retrieval_context,
                     )
                 )
                 self.score = self._calculate_score()
@@ -115,7 +124,7 @@ class ContextualPrecisionMetric(BaseMetric):
                 await self._a_generate_verdicts(
                     test_case.input,
                     test_case.expected_output,
-                    test_case.retrieval_context,
+                    test_case.retrieval_context if self.retrieval_context is None else self.retrieval_context,
                 )
             )
             self.score = self._calculate_score()

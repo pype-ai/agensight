@@ -25,7 +25,6 @@ class ContextualRecallMetric(BaseMetric):
         ModelTestCaseParams.INPUT,
         ModelTestCaseParams.ACTUAL_OUTPUT,
         ModelTestCaseParams.RETRIEVAL_CONTEXT,
-        ModelTestCaseParams.EXPECTED_OUTPUT,
     ]
 
     def __init__(
@@ -33,9 +32,11 @@ class ContextualRecallMetric(BaseMetric):
         threshold: float = 0.5,
         model: Optional[Union[str, DeepEvalBaseLLM]] = None,
         include_reason: bool = True,
-        async_mode: bool = True,
+        async_mode: bool = False,
         strict_mode: bool = False,
         verbose_mode: bool = False,
+        name: Optional[str] = None,
+        retrieval_context: Optional[List[str]] = None,
         evaluation_template: Type[
             ContextualRecallTemplate
         ] = ContextualRecallTemplate,
@@ -48,6 +49,8 @@ class ContextualRecallMetric(BaseMetric):
         self.strict_mode = strict_mode
         self.verbose_mode = verbose_mode
         self.evaluation_template = evaluation_template
+        self.retrieval_context = retrieval_context
+        self.name = name
 
     def measure(
         self,
@@ -57,13 +60,16 @@ class ContextualRecallMetric(BaseMetric):
     ) -> float:
         if isinstance(test_case, ConversationalTestCase):
             test_case = test_case.turns[-1]
+            
         check_llm_test_case_params(test_case, self._required_params, self)
+        print("self.async_mode", self.async_mode)
+        
 
         self.evaluation_cost = 0 if self.using_native_model else None
         with metric_progress_indicator(
             self, _show_indicator=_show_indicator, _in_component=_in_component
         ):
-            if self.async_mode:
+            if self.async_mode == True:
                 loop = get_or_create_event_loop()
                 loop.run_until_complete(
                     self.a_measure(
@@ -75,7 +81,7 @@ class ContextualRecallMetric(BaseMetric):
             else:
                 self.verdicts: List[ContextualRecallVerdict] = (
                     self._generate_verdicts(
-                        test_case.expected_output, test_case.retrieval_context
+                        test_case.expected_output, test_case.retrieval_context if self.retrieval_context is None else self.retrieval_context
                     )
                 )
                 self.score = self._calculate_score()
@@ -110,7 +116,7 @@ class ContextualRecallMetric(BaseMetric):
         ):
             self.verdicts: List[ContextualRecallVerdict] = (
                 await self._a_generate_verdicts(
-                    test_case.expected_output, test_case.retrieval_context
+                    test_case.expected_output, test_case.retrieval_context if self.retrieval_context is None else self.retrieval_context
                 )
             )
             self.score = self._calculate_score()
