@@ -13,7 +13,7 @@ import json
 import time
 import requests
 
-
+from .config import ENDPOINT_URL
 
 def validate_token(token):
     """
@@ -22,10 +22,7 @@ def validate_token(token):
     """
     try:
         response = requests.post(
-            # "http://localhost:4000/dev/api/v1/auth/validate",
-            "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/auth/validate",
-            # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/auth/validate",
-            # f"{ENDPOINT_URL}/auth/validate",
+            f"{ENDPOINT_URL}/auth/validate",
             headers={"Content-Type": "application/json"},
             data=json.dumps({"token": token}),
             timeout=5
@@ -87,10 +84,7 @@ def init(name="default", mode="local", auto_instrument_llms=True, session=None, 
         if get_mode() in ["prod", "dev"]:
             try:
                 requests.post(
-                    "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create/session",
-                    # "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create/session",
-                    # "http://localhost:4000/dev/api/v1/logs/create/session",
-                    # f"{ENDPOINT_URL}/logs/create/session",
+                    f"{ENDPOINT_URL}/logs/create/session",
                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {project_id}" },
                     data=json.dumps({
                         "data": {
