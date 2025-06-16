@@ -10,7 +10,7 @@ from agensight.tracing.decorators import current_trace_id, current_trace_name
 
 # BASE_URL = "https://vqes5twkl5.execute-api.ap-south-1.amazonaws.com/dev/api/v1/logs/create"
 BASE_URL = "https://1vrnlwnych.execute-api.ap-south-1.amazonaws.com/prod/api/v1/logs/create"
-
+# BASE_URL = "http://localhost:4000/dev/api/v1/logs/create"
 def post_to_lambda(endpoint: str, data: dict):
     try:
         url = f"{BASE_URL}/{endpoint}"
@@ -184,6 +184,20 @@ class ProdSpanExporter(SpanExporter):
                                 continue
                 except Exception:
                     continue
+
+                try:
+                # Use the metrics configuration from the span
+                    post_to_lambda("span/metric", {
+                            "span_id": span_id,
+                            "trace_id": trace_id,
+                            "attributes": json.dumps(attrs),
+                            "span_name": span.name,
+                            "project_id": self.project_id,
+                            "mode": get_mode()
+                        })
+                except Exception as e:
+                    print(f"Error in direct evaluation using configs for span {span_id}: {e}")
+                    pass
 
                 try:
                     for i in range(5):
