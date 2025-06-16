@@ -13,12 +13,11 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from agensight import init, trace, span
-
 # Initialize Agensight with prod mode and project ID
 init(
     name="travel-assistant-pro-plus",
     mode="prod",
-    token="ebc21a07b804c9ab7825"
+    token="a1d07b43b1732165a"
 )
 
 api_key = os.getenv("OPENAI_API_KEY")

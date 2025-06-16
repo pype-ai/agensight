@@ -22,7 +22,11 @@ logger = logging.getLogger(__name__)
 
 # === Setup tracing and OpenAI ===
 try:
-    init(name="langgraph-joke", auto_instrument_llms=False)  # Disable auto instrumentation
+    init(
+    name="travel-assistant-pro-plus-max",
+    mode="prod",
+    token="a1d07b43b1732165ac53"
+) # Disable auto instrumentation
     logger.info("Tracing initialized successfully")
 except Exception as e:
     logger.warning(f"Failed to initialize tracing: {e}")
@@ -56,18 +60,16 @@ helpfulness = GEvalEvaluator(
 
 a = ContextualPrecisionMetric(
     name="Contextual Precision",
-    threshold=0.7,
     model="gpt-4o",
-    retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
+    retrieval_context=["cat sitting on the computer?"]
 )
 
 
 
 contextual_relevancy = ContextualRelevancyMetric(
     name="Contextual Relevancy",
-    threshold=0.7,
     model="gpt-4o",
-    retrieval_context=["A joke is a short, funny story or saying that is told to make" ,"people laugh. It often has a punchline at the end that is unexpected or surprising."]
+    retrieval_context=["cat sitting on the computer?"]
 )
 
 @span(name="generate_joke",metrics=[contextual_relevancy,helpfulness,a])
