@@ -9,6 +9,8 @@ export interface ConfigVersion {
 // API base URL
 const API_BASE_URL = "http://0.0.0.0:5001/api";
 
+import { AgentConfig, AgentConfigData } from "@/lib/types/agent";
+
 // Service functions using real API endpoints
 export async function getConfigVersions(): Promise<ConfigVersion[]> {
   try {
@@ -20,12 +22,17 @@ export async function getConfigVersions(): Promise<ConfigVersion[]> {
     
     return await response.json();
   } catch (error) {
-    console.error("Failed to fetch config versions:", error);
+    console.error('Failed to fetch config versions:', error);
     throw error;
   }
 }
 
-export async function getConfigByVersion(version: string): Promise<unknown> {
+interface ConfigApiResponse {
+  configData: AgentConfigData;
+}
+
+export async function getConfigByVersion(version: string): Promise<AgentConfigData> {
+  console.log(`[${new Date().toISOString()}] Fetching config for version:`, version);
   try {
     const response = await fetch(`${API_BASE_URL}/config?version=${encodeURIComponent(version)}`);
     
@@ -33,7 +40,35 @@ export async function getConfigByVersion(version: string): Promise<unknown> {
       throw new Error(`Error fetching config version ${version}: ${response.statusText}`);
     }
     
-    return await response.json();
+    const responseData = await response.json();
+    
+    // Handle both response formats:
+    // 1. Direct AgentConfigData
+    // 2. Wrapped in { configData: AgentConfigData }
+    const configData = responseData.configData || responseData;
+    
+    if (!configData) {
+      throw new Error('Invalid config data format received from server');
+    }
+    
+    // Ensure required arrays exist
+    const agents = Array.isArray(configData.agents) ? configData.agents : [];
+    const connections = Array.isArray(configData.connections) ? configData.connections : [];
+    const prompts = Array.isArray(configData.prompts) ? configData.prompts : [];
+    
+    const result = {
+      agents,
+      connections,
+      prompts
+    };
+    
+    console.log(`[${new Date().toISOString()}] Fetched config data:`, {
+      agents: agents.map((a: AgentConfig) => a.name),
+      connections: connections.length,
+      prompts: prompts.length
+    });
+    
+    return result;
   } catch (error) {
     console.error(`Failed to fetch config version ${version}:`, error);
     throw error;
